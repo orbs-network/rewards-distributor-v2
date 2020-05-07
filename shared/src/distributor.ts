@@ -12,7 +12,7 @@ export class Distribution {
   static startNew(currentBlock: number, split: Split, history: EventHistory): Distribution {
     const inProgress = Distribution.getInProgress(currentBlock, history);
     if (inProgress != null) {
-      throw new Error(`There already is a distribution in progress`);
+      throw new Error(`There already is a distribution in progress.`);
     }
     return new Distribution(0, 0, split, history);
   }

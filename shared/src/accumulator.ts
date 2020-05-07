@@ -1,5 +1,40 @@
 import BN from 'bn.js';
 import { EventHistory } from './history';
+import { divideAsNumber } from './helpers';
+
+const zero = new BN(0);
+
+export class CommitteeAccumulator {
+
+  private nextIndex: number;
+  private currentState: number; // before applying nextIndex
+  private currentBlock: number; // before applying nextIndex
+
+  constructor(private history: EventHistory) {
+    this.nextIndex = 0;
+    this.currentState = 0;
+    this.currentBlock = 0;
+  }
+
+  // returns relative weight [0,1] of the delegate in committee
+  forBlock(block: number): number {
+    if (block > this.history.lastProcessedBlock) {
+      throw new Error(`Trying to access history at block ${block} beyond last processed ${this.history.lastProcessedBlock}.`);
+    }
+    if (block < this.currentBlock) {
+      throw new Error(`Trying to go backwards to block ${block} in accumulator that is on block ${this.currentBlock}.`);
+    }
+    while (this.nextIndex < this.history.committeeChangeEvents.length) {
+      const event = this.history.committeeChangeEvents[this.nextIndex];
+      if (event.block > block) break;
+      this.currentState = event.newRelativeWeightInCommittee;
+      this.currentBlock = event.block;
+      this.nextIndex++;
+    }
+    return this.currentState;
+  }
+
+}
 
 export interface DelegationsSnapshot {
   stake: { [delegatorAddress: string]: BN }; // total stake of this delegator that is staked towards this delegate
@@ -8,25 +43,47 @@ export interface DelegationsSnapshot {
 
 export class DelegationsAccumulator {
 
-  constructor(private history: EventHistory) {}
+  private nextIndex: number;
+  private currentState: DelegationsSnapshot; // before applying nextIndex
+  private currentBlock: number; // before applying nextIndex
+
+  constructor(private history: EventHistory) {
+    this.nextIndex = 0;
+    this.currentState = {stake: {}, relativeWeight: {}};
+    this.currentBlock = 0;
+  }
 
   // returns stake and relative weight [0,1] for each delegator
   forBlock(block: number): DelegationsSnapshot {
-    return {
-      stake: {},
-      relativeWeight: {}
-    };
-  }
-
-}
-
-export class CommitteeAccumulator {
-
-  constructor(private history: EventHistory) {}
-
-  // returns relative weight [0,1] in committee
-  forBlock(block: number): number {
-    return 0;
+    if (block > this.history.lastProcessedBlock) {
+      throw new Error(`Trying to access history at block ${block} beyond last processed ${this.history.lastProcessedBlock}.`);
+    }
+    if (block < this.currentBlock) {
+      throw new Error(`Trying to go backwards to block ${block} in accumulator that is on block ${this.currentBlock}.`);
+    }
+    while (this.nextIndex < this.history.delegationChangeEvents.length) {
+      const event = this.history.delegationChangeEvents[this.nextIndex];
+      if (event.block > block) break;
+      const delegatorAddress = event.delegatorAddress;
+      if (event.newDelegatedStake.lte(zero)) {
+        delete this.currentState.stake[delegatorAddress];
+        delete this.currentState.relativeWeight[delegatorAddress];
+      } else {
+        this.currentState.stake[delegatorAddress] = event.newDelegatedStake;
+      }
+      const sum = new BN(0);
+      for (const [,delegatorStake] of Object.entries(this.currentState.stake)) {
+        sum.iadd(delegatorStake);
+      }
+      if (sum.gt(zero)) {
+        for (const [delegatorAddress, delegatorStake] of Object.entries(this.currentState.stake)) {
+          this.currentState.relativeWeight[delegatorAddress] = divideAsNumber(delegatorStake, sum);
+        }
+      }
+      this.currentBlock = event.block;
+      this.nextIndex++;
+    }
+    return this.currentState;
   }
 
 }
