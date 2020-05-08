@@ -31,6 +31,29 @@ export class EventHistory {
   constructor(public delegateAddress: string) {}
 }
 
+// efficient binary search
+export function findLowestClosestIndexToBlock(block: number, events: {block: number}[]): number {
+  if (events.length == 0) {
+    throw new Error(`Event list is empty.`);
+  }
+  let left = 0;
+  let right = events.length - 1;
+  while (events[left].block < block) {
+    if (events[right].block < block) {
+      throw new Error(`Not found.`);
+    }
+    let middle = Math.floor((left + right) / 2);
+    if (events[middle].block >= block) {
+      if (middle == right) middle--;
+      right = middle;
+    } else {
+      if (middle == left) middle++;
+      left = middle;
+    }
+  }
+  return left;
+}
+
 export class HistoryDownloader {
 
   public history: EventHistory;
