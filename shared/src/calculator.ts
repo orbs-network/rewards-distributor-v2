@@ -11,12 +11,17 @@ export interface Division {
 
 export function divideSingleAssignment(assignmentEventIndex: number, split: Split, history: EventHistory): Division {
   return {
-    amounts: {}
-  }
+    amounts: {},
+  };
 }
 
-export function divideBlockPeriod(firstBlock: number, lastBlock: number, split: Split, history: EventHistory): Division {
+export function divideBlockPeriod(
+  firstBlock: number,
+  lastBlock: number,
+  split: Split,
+  history: EventHistory
+): Division {
   return {
-    amounts: {}
-  }
+    amounts: {},
+  };
 }

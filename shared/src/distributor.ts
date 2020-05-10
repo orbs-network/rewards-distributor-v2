@@ -2,7 +2,6 @@ import { EventHistory } from './history';
 import { Split, Division, divideBlockPeriod } from './calculator';
 
 export class Distribution {
-
   // returns the in-progress distribution if exists, null if no distribution in progress
   static getInProgress(currentBlock: number, history: EventHistory): Distribution | null {
     return null;
@@ -19,7 +18,12 @@ export class Distribution {
 
   public division: Division;
 
-  private constructor(public firstBlock: number, public lastBlock: number, public split: Split, private history: EventHistory) {
+  private constructor(
+    public firstBlock: number,
+    public lastBlock: number,
+    public split: Split,
+    private history: EventHistory
+  ) {
     this.division = divideBlockPeriod(firstBlock, lastBlock, split, history);
   }
 
@@ -27,5 +31,4 @@ export class Distribution {
   async sendNextTransaction(): Promise<boolean> {
     return false;
   }
-
 }

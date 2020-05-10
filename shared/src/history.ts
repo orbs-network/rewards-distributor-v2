@@ -31,8 +31,21 @@ export class EventHistory {
   constructor(public delegateAddress: string) {}
 }
 
+export class HistoryDownloader {
+  public history: EventHistory;
+
+  constructor(delegateAddress: string, public startingBlock: number) {
+    this.history = new EventHistory(delegateAddress);
+  }
+
+  // returns the last processed block number in the new batch
+  async processNextBatch(maxBlocksInBatch: number): Promise<number> {
+    return this.history.lastProcessedBlock;
+  }
+}
+
 // efficient binary search
-export function findLowestClosestIndexToBlock(block: number, events: {block: number}[]): number {
+export function findLowestClosestIndexToBlock(block: number, events: { block: number }[]): number {
   if (events.length == 0) {
     throw new Error(`Event list is empty.`);
   }
@@ -52,19 +65,4 @@ export function findLowestClosestIndexToBlock(block: number, events: {block: num
     }
   }
   return left;
-}
-
-export class HistoryDownloader {
-
-  public history: EventHistory;
-
-  constructor(delegateAddress: string, public startingBlock: number) {
-    this.history = new EventHistory(delegateAddress);
-  }
-
-  // returns the last processed block number in the new batch
-  async processNextBatch(maxBlocksInBatch: number): Promise<number> {
-    return this.history.lastProcessedBlock;
-  }
-
 }

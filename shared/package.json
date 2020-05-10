@@ -6,7 +6,8 @@
     "clean": "rimraf ./dist/",
     "prebuild": "npm run clean",
     "build": "tsc",
-    "test": "jest"
+    "test": "jest",
+    "prettify": "npx prettier \"src/**/*.ts\" --write"
   },
   "devDependencies": {
     "@types/jest": "^23.3.2",

@@ -5,7 +5,6 @@ import { divideAsNumber } from './helpers';
 const zero = new BN(0);
 
 export class CommitteeAccumulator {
-
   private nextIndex: number;
   private currentState: number; // before applying nextIndex
   private currentBlock: number; // before applying nextIndex
@@ -19,7 +18,9 @@ export class CommitteeAccumulator {
   // returns relative weight [0,1] of the delegate in committee
   forBlock(block: number): number {
     if (block > this.history.lastProcessedBlock) {
-      throw new Error(`Trying to access history at block ${block} beyond last processed ${this.history.lastProcessedBlock}.`);
+      throw new Error(
+        `Trying to access history at block ${block} beyond last processed ${this.history.lastProcessedBlock}.`
+      );
     }
     if (block < this.currentBlock) {
       throw new Error(`Trying to go backwards to block ${block} in accumulator that is on block ${this.currentBlock}.`);
@@ -33,7 +34,6 @@ export class CommitteeAccumulator {
     }
     return this.currentState;
   }
-
 }
 
 export interface DelegationsSnapshot {
@@ -42,21 +42,22 @@ export interface DelegationsSnapshot {
 }
 
 export class DelegationsAccumulator {
-
   private nextIndex: number;
   private currentState: DelegationsSnapshot; // before applying nextIndex
   private currentBlock: number; // before applying nextIndex
 
   constructor(private history: EventHistory) {
     this.nextIndex = 0;
-    this.currentState = {stake: {}, relativeWeight: {}};
+    this.currentState = { stake: {}, relativeWeight: {} };
     this.currentBlock = 0;
   }
 
   // returns stake and relative weight [0,1] for each delegator
   forBlock(block: number): DelegationsSnapshot {
     if (block > this.history.lastProcessedBlock) {
-      throw new Error(`Trying to access history at block ${block} beyond last processed ${this.history.lastProcessedBlock}.`);
+      throw new Error(
+        `Trying to access history at block ${block} beyond last processed ${this.history.lastProcessedBlock}.`
+      );
     }
     if (block < this.currentBlock) {
       throw new Error(`Trying to go backwards to block ${block} in accumulator that is on block ${this.currentBlock}.`);
@@ -72,7 +73,7 @@ export class DelegationsAccumulator {
         this.currentState.stake[delegatorAddress] = event.newDelegatedStake;
       }
       const sum = new BN(0);
-      for (const [,delegatorStake] of Object.entries(this.currentState.stake)) {
+      for (const [, delegatorStake] of Object.entries(this.currentState.stake)) {
         sum.iadd(delegatorStake);
       }
       if (sum.gt(zero)) {
@@ -85,5 +86,4 @@ export class DelegationsAccumulator {
     }
     return this.currentState;
   }
-
 }
