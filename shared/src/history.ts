@@ -28,14 +28,14 @@ export class EventHistory {
   public committeeChangeEvents: CommitteeChangeEvent[] = [];
   public assignmentEvents: AssignmentEvent[] = [];
   public distributionEvents: DistributionEvent[] = [];
-  constructor(public delegateAddress: string) {}
+  constructor(public delegateAddress: string, public startingBlock: number) {}
 }
 
 export class HistoryDownloader {
   public history: EventHistory;
 
-  constructor(delegateAddress: string, public startingBlock: number) {
-    this.history = new EventHistory(delegateAddress);
+  constructor(delegateAddress: string, startingBlock: number) {
+    this.history = new EventHistory(delegateAddress, startingBlock);
   }
 
   // returns the last processed block number in the new batch
@@ -44,16 +44,16 @@ export class HistoryDownloader {
   }
 }
 
-// efficient binary search
+// efficient binary search, returns -1 if not found
 export function findLowestClosestIndexToBlock(block: number, events: { block: number }[]): number {
   if (events.length == 0) {
-    throw new Error(`Event list is empty.`);
+    return -1;
   }
   let left = 0;
   let right = events.length - 1;
   while (events[left].block < block) {
     if (events[right].block < block) {
-      throw new Error(`Not found.`);
+      return -1;
     }
     let middle = Math.floor((left + right) / 2);
     if (events[middle].block >= block) {
