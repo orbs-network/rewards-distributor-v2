@@ -1,6 +1,6 @@
 import BN from 'bn.js';
 import { EventHistory } from './history';
-import { divideAsNumber } from './helpers';
+import { bnDivideAsNumber } from './helpers';
 
 const zero = new BN(0);
 
@@ -78,7 +78,7 @@ export class DelegationsAccumulator {
       }
       if (sum.gt(zero)) {
         for (const [delegatorAddress, delegatorStake] of Object.entries(this.currentState.stake)) {
-          this.currentState.relativeWeight[delegatorAddress] = divideAsNumber(delegatorStake, sum);
+          this.currentState.relativeWeight[delegatorAddress] = bnDivideAsNumber(delegatorStake, sum);
         }
       }
       this.currentBlock = event.block;

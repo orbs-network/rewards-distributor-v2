@@ -2,7 +2,7 @@ import { EventHistory } from './history';
 import BN from 'bn.js';
 import { Calculator } from './calculator';
 import { CommitteeAccumulator, DelegationsAccumulator } from './accumulator';
-import { divideAsNumber } from './helpers';
+import { bnDivideAsNumber } from './helpers';
 
 const getHistoryWithAssignments = () => {
   const h = new EventHistory('G1', 2);

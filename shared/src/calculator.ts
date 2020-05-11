@@ -1,7 +1,7 @@
 import BN from 'bn.js';
 import { EventHistory, findLowestClosestIndexToBlock } from './history';
 import { CommitteeAccumulator, DelegationsAccumulator } from './accumulator';
-import { multiplyByNumber } from './helpers';
+import { bnMultiplyByNumber } from './helpers';
 
 export interface Split {
   fractionForDelegators: number; // eg. 0.70 to give delegators 70% and keep 30%
@@ -75,7 +75,7 @@ export class Calculator {
     const sumWeightsOfTotalRewards: { [delegatorAddress: string]: number } = {};
 
     // step 1: calc the amounts according to the split
-    const assignmentAmountForDelegators = multiplyByNumber(
+    const assignmentAmountForDelegators = bnMultiplyByNumber(
       history.assignmentEvents[assignmentEventIndex].amount,
       split.fractionForDelegators
     );
@@ -114,7 +114,7 @@ export class Calculator {
     for (const [delegatorAddress, delegatorWeight] of Object.entries(sumWeightsOfTotalRewards)) {
       if (delegatorAddress == history.delegateAddress) continue; // the entire reminder is given to the delegate
       const delegatorRelativeWeight = delegatorWeight / totalWeight;
-      const amountForDelegator = multiplyByNumber(assignmentAmountForDelegators, delegatorRelativeWeight);
+      const amountForDelegator = bnMultiplyByNumber(assignmentAmountForDelegators, delegatorRelativeWeight);
       res.amounts[delegatorAddress] = amountForDelegator;
       totalAmountDividedSoFar.iadd(amountForDelegator);
     }
