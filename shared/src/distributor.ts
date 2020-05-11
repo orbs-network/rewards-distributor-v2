@@ -1,5 +1,5 @@
 import { EventHistory } from './history';
-import { Split, Division, divideBlockPeriod } from './calculator';
+import { Split, Division, Calculator } from './calculator';
 
 export class Distribution {
   // returns the in-progress distribution if exists, null if no distribution in progress
@@ -24,7 +24,7 @@ export class Distribution {
     public split: Split,
     private history: EventHistory
   ) {
-    this.division = divideBlockPeriod(firstBlock, lastBlock, split, history);
+    this.division = Calculator.divideBlockPeriod(firstBlock, lastBlock, split, history);
   }
 
   // returns true if more transactions need to be sent, false if distribution is finished
