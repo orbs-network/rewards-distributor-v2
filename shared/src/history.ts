@@ -23,7 +23,7 @@ export interface DistributionEvent {
 }
 
 export class EventHistory {
-  public lastProcessedBlock: number = 0;
+  public lastProcessedBlock = 0;
   public delegationChangeEvents: DelegationChangeEvent[] = [];
   public committeeChangeEvents: CommitteeChangeEvent[] = [];
   public assignmentEvents: AssignmentEvent[] = [];
@@ -40,6 +40,10 @@ export class HistoryDownloader {
 
   // returns the last processed block number in the new batch
   async processNextBatch(maxBlocksInBatch: number): Promise<number> {
+    // temp just for lint
+    await new Promise((resolve) => {
+      resolve();
+    });
     return this.history.lastProcessedBlock;
   }
 }

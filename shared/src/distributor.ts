@@ -29,6 +29,10 @@ export class Distribution {
 
   // returns true if more transactions need to be sent, false if distribution is finished
   async sendNextTransaction(): Promise<boolean> {
+    // temp just for lint
+    await new Promise((resolve) => {
+      resolve();
+    });
     return false;
   }
 }

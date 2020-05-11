@@ -105,7 +105,7 @@ export class Calculator {
 
     // step 4: calc the total weight since it's all relative
     let totalWeight = 0;
-    for (const [delegatorAddress, delegatorWeight] of Object.entries(sumWeightsOfTotalRewards)) {
+    for (const [, delegatorWeight] of Object.entries(sumWeightsOfTotalRewards)) {
       totalWeight += delegatorWeight;
     }
 
@@ -131,6 +131,7 @@ export class Calculator {
 function findFirstBlockAssignmentPaysFor(assignmentEventIndex: number, history: EventHistory): number {
   if (assignmentEventIndex > 0) {
     const accordingToPrev = history.assignmentEvents[assignmentEventIndex - 1].block + 1;
+    // mostly to deal with two assignments in the same block
     return Math.min(accordingToPrev, history.assignmentEvents[assignmentEventIndex].block);
   } else {
     return history.startingBlock;
