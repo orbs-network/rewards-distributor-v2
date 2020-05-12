@@ -1,11 +1,7 @@
 import BN from 'bn.js';
-import { EventHistory, findLowestClosestIndexToBlock } from './history';
+import { EventHistory, findLowestClosestIndexToBlock, Split } from './history';
 import { CommitteeAccumulator, DelegationsAccumulator } from './accumulator';
 import { bnMultiplyByNumber } from './helpers';
-
-export interface Split {
-  fractionForDelegators: number; // eg. 0.70 to give delegators 70% and keep 30%
-}
 
 export interface Division {
   amounts: { [recipientAddress: string]: BN };

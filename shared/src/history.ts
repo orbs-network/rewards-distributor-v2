@@ -18,8 +18,16 @@ export interface AssignmentEvent {
 
 export interface DistributionEvent {
   block: number;
-  recipientAddress: string;
-  amount: BN; // the amount distributed to the recipient delegator by the delegate in this distribution
+  recipientAddresses: string[];
+  amounts: BN[]; // the amount distributed to the recipient delegator by the delegate in this distribution
+  batchFirstBlock: number; // this distribution is part of a batch - where does the batch start
+  batchLastBlock: number; // this distribution is part of a batch - where does the batch end
+  batchSplit: Split; // the split used for this batch
+  batchTxIndex: number; // the batch has multiple distribution transactions - which one is this
+}
+
+export interface Split {
+  fractionForDelegators: number; // eg. 0.70 to give delegators 70% and keep 30%
 }
 
 export class EventHistory {
