@@ -131,27 +131,27 @@ export class Distribution {
   }
 
   // returns isComplete - false if more transactions need to be sent, true if distribution is finished
-  async sendNextTransaction(numRecipientsPerTx: number, progressCallback?: TxProgressNotification): Promise<boolean> {
-    if (!numRecipientsPerTx) {
-      numRecipientsPerTx = DEFAULT_NUM_RECIPIENTS_PER_TX;
+  async sendNextTransaction(numRecipientsInTx: number, progressCallback?: TxProgressNotification): Promise<boolean> {
+    if (!numRecipientsInTx) {
+      numRecipientsInTx = DEFAULT_NUM_RECIPIENTS_PER_TX;
     }
 
     const remaining = this._findRemainingRecipients();
     const allSortedRecipients = _.sortBy(Object.keys(remaining));
     const allSortedAmounts = _.map(allSortedRecipients, (r) => remaining[r]);
     if (allSortedRecipients.length == 0) return true;
-    if (numRecipientsPerTx > allSortedRecipients.length) numRecipientsPerTx = allSortedRecipients.length;
+    if (numRecipientsInTx > allSortedRecipients.length) numRecipientsInTx = allSortedRecipients.length;
 
-    while (numRecipientsPerTx > 0) {
-      const recipientAddresses = _.take(allSortedRecipients, numRecipientsPerTx);
-      const amounts = _.take(allSortedAmounts, numRecipientsPerTx);
+    while (numRecipientsInTx > 0) {
+      const recipientAddresses = _.take(allSortedRecipients, numRecipientsInTx);
+      const amounts = _.take(allSortedAmounts, numRecipientsInTx);
       try {
         await this._processSendTransactionWithWeb3(recipientAddresses, amounts);
         if (recipientAddresses.length == allSortedRecipients.length) return true;
         else return false;
       } catch (e) {
         if (e instanceof TooManyRecipientsError) {
-          numRecipientsPerTx = Math.floor(numRecipientsPerTx * REDUCE_TOO_MANY_RECIPIENTS_BY);
+          numRecipientsInTx = Math.floor(numRecipientsInTx * REDUCE_TOO_MANY_RECIPIENTS_BY);
         } else {
           throw e;
         }
