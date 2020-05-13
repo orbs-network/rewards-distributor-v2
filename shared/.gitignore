@@ -2,6 +2,8 @@
 !yarn.lock
 !src/
 !src/**/*
+!e2e/
+!e2e/**/*
 !*.js
 !*.json
 !*.md

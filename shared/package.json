@@ -10,9 +10,13 @@
     "build": "tsc",
     "pretest": "npm run typecheck && npm run lint",
     "test": "jest",
-    "prettify": "npx prettier \"src/**/*.ts\" --write"
+    "test:e2e": "jest --config ./e2e/jest.json",
+    "prettify": "npx prettier \"src/**/*.ts\" --write && npx prettier \"e2e/**/*.ts\" --write",
+    "start-ganache": "mkdir -p _out && ganache-cli -p 7545 -i 5777 -a 100 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\" > _out/ganache.log & echo $! > _out/local-ganache.pid",
+    "stop-ganache": "pkill -P `cat _out/local-ganache.pid`"
   },
   "devDependencies": {
+    "@orbs-network/orbs-ethereum-contracts-v2": "0.0.3",
     "@types/jest": "^23.3.2",
     "@types/lodash": "^4.14.150",
     "@types/web3": "^1.2.2",
@@ -20,6 +24,7 @@
     "@typescript-eslint/parser": "^2.25.0",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.10.1",
+    "ganache-cli": "^6.9.1",
     "jest": "^23.6.0",
     "rimraf": "^3.0.2",
     "ts-jest": "^23.10.2",
@@ -33,6 +38,7 @@
     "web3": "^1.2.7"
   },
   "jest": {
+    "rootDir": "src",
     "transform": {
       ".(ts|tsx)": "ts-jest"
     },
