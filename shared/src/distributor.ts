@@ -8,15 +8,15 @@ const REDUCE_TOO_MANY_RECIPIENTS_BY = 0.8;
 
 export class Distribution {
   // returns the last distribution if exists, null if no distribution done yet
-  static getLast(currentBlock: number, history: EventHistory): Distribution | null {
-    if (currentBlock > history.lastProcessedBlock) {
+  static getLast(latestEthereumBlock: number, history: EventHistory): Distribution | null {
+    if (latestEthereumBlock > history.lastProcessedBlock) {
       throw new Error(
-        `History is not fully synchronized, current block ${currentBlock} last processed ${history.lastProcessedBlock}.`
+        `History is not fully synchronized, current block ${latestEthereumBlock} last processed ${history.lastProcessedBlock}.`
       );
     }
-    if (currentBlock < history.lastProcessedBlock) {
+    if (latestEthereumBlock < history.lastProcessedBlock) {
       throw new Error(
-        `History, last processed ${history.lastProcessedBlock}, is more advanced than current block ${currentBlock}.`
+        `History, last processed ${history.lastProcessedBlock}, is more advanced than current block ${latestEthereumBlock}.`
       );
     }
     if (history.distributionEvents.length == 0) {
@@ -46,10 +46,10 @@ export class Distribution {
   }
 
   // starts a new distribution assuming there is none in progress and returns it
-  static startNew(currentBlock: number, split: Split, history: EventHistory): Distribution {
+  static startNew(latestEthereumBlock: number, split: Split, history: EventHistory): Distribution {
     let firstBlock = 0;
-    const lastBlock = currentBlock;
-    const lastDistribution = Distribution.getLast(currentBlock, history);
+    const lastBlock = latestEthereumBlock;
+    const lastDistribution = Distribution.getLast(latestEthereumBlock, history);
     if (lastDistribution != null) {
       if (!lastDistribution.isComplete()) {
         throw new Error(`There already is a distribution in progress.`);
@@ -131,7 +131,7 @@ export class Distribution {
   }
 
   // returns isComplete - false if more transactions need to be sent, true if distribution is finished
-  async sendNextTransaction(numRecipientsInTx: number, progressCallback?: TxProgressNotification): Promise<boolean> {
+  async sendNextTransaction(numRecipientsInTx?: number, progressCallback?: TxProgressNotification): Promise<boolean> {
     if (!numRecipientsInTx) {
       numRecipientsInTx = DEFAULT_NUM_RECIPIENTS_PER_TX;
     }

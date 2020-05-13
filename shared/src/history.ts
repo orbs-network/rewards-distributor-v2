@@ -1,4 +1,6 @@
 import BN from 'bn.js';
+import { EventData } from 'web3-eth-contract';
+import pLimit from 'p-limit';
 
 export interface DelegationChangeEvent {
   block: number;
@@ -39,6 +41,8 @@ export class EventHistory {
   constructor(public delegateAddress: string, public startingBlock: number) {}
 }
 
+const DEFAULT_CONCURRENCY = 5;
+
 export class HistoryDownloader {
   public history: EventHistory;
 
@@ -47,12 +51,53 @@ export class HistoryDownloader {
   }
 
   // returns the last processed block number in the new batch
-  async processNextBatch(maxBlocksInBatch: number): Promise<number> {
+  async processNextBatch(maxBlocksInBatch: number, latestEthereumBlock: number, concurrency?: number): Promise<number> {
+    if (!concurrency) {
+      concurrency = DEFAULT_CONCURRENCY;
+    }
+
+    const limit = pLimit(concurrency);
+    const fromBlock = this.history.lastProcessedBlock + 1;
+    const toBlock = Math.min(this.history.lastProcessedBlock + maxBlocksInBatch, latestEthereumBlock);
+    if (toBlock < fromBlock) {
+      throw new Error(`Not enough new blocks in network to process another batch.`);
+    }
+
+    const requests = [];
+    requests[0] = limit(() => this._processReadEventsWithWeb3('C1', 'E1', fromBlock, toBlock));
+    requests[1] = limit(() => this._processReadEventsWithWeb3('C2', 'E2', fromBlock, toBlock));
+    requests[2] = limit(() => this._processReadEventsWithWeb3('C3', 'E3', fromBlock, toBlock));
+
+    const results = await Promise.all(requests);
+    this._parseE1Events(results[0]);
+    this._parseE2Events(results[1]);
+    this._parseE3Events(results[2]);
+
+    this.history.lastProcessedBlock = toBlock;
+    return this.history.lastProcessedBlock;
+  }
+
+  async _processReadEventsWithWeb3(
+    contract: string,
+    event: string,
+    fromBlock: number,
+    toBlock: number
+  ): Promise<EventData[]> {
     // temp just for lint
     await new Promise((resolve) => {
       resolve();
     });
-    return this.history.lastProcessedBlock;
+    return [];
+  }
+
+  _parseE1Events(events: EventData[]) {
+    return [];
+  }
+  _parseE2Events(events: EventData[]) {
+    return [];
+  }
+  _parseE3Events(events: EventData[]) {
+    return [];
   }
 }
 
