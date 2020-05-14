@@ -1,4 +1,5 @@
 {
+  "verbose": true,
   "rootDir": ".",
   "transform": {
     ".(ts|tsx)": "ts-jest"

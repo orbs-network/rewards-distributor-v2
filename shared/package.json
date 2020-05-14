@@ -12,11 +12,10 @@
     "test": "jest",
     "test:e2e": "jest --config ./e2e/jest.json",
     "prettify": "npx prettier \"src/**/*.ts\" --write && npx prettier \"e2e/**/*.ts\" --write",
-    "start-ganache": "mkdir -p _out && ganache-cli -p 7545 -i 5777 -a 100 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\" > _out/ganache.log & echo $! > _out/local-ganache.pid",
+    "start-ganache": "mkdir -p _out && ganache-cli -p 7545 -i 5777 -a 1000 --gasLimit 0x7FFFFFFF --gasPrice 1 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\" > _out/ganache.log & echo $! > _out/local-ganache.pid",
     "stop-ganache": "pkill -P `cat _out/local-ganache.pid`"
   },
   "devDependencies": {
-    "@orbs-network/orbs-ethereum-contracts-v2": "0.0.3",
     "@types/jest": "^23.3.2",
     "@types/lodash": "^4.14.150",
     "@types/web3": "^1.2.2",
@@ -31,11 +30,13 @@
     "typescript": "^3.7.5"
   },
   "dependencies": {
+    "@orbs-network/orbs-ethereum-contracts-v2": "0.0.4",
     "bignumber.js": "^9.0.0",
     "bn.js": "^5.1.1",
     "lodash": "^4.17.15",
     "p-limit": "^2.3.0",
-    "web3": "^1.2.7"
+    "web3": "1.2.6",
+    "web3-eth-contract": "1.2.6"
   },
   "jest": {
     "rootDir": "src",

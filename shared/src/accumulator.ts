@@ -1,8 +1,6 @@
 import BN from 'bn.js';
 import { EventHistory } from './history';
-import { bnDivideAsNumber } from './helpers';
-
-const zero = new BN(0);
+import { bnDivideAsNumber, bnZero } from './helpers';
 
 export class CommitteeAccumulator {
   private nextIndex: number;
@@ -66,7 +64,7 @@ export class DelegationsAccumulator {
       const event = this.history.delegationChangeEvents[this.nextIndex];
       if (event.block > block) break;
       const delegatorAddress = event.delegatorAddress;
-      if (event.newDelegatedStake.lte(zero)) {
+      if (event.newDelegatedStake.lte(bnZero)) {
         delete this.currentState.stake[delegatorAddress];
         delete this.currentState.relativeWeight[delegatorAddress];
       } else {
@@ -76,7 +74,7 @@ export class DelegationsAccumulator {
       for (const [, delegatorStake] of Object.entries(this.currentState.stake)) {
         sum.iadd(delegatorStake);
       }
-      if (sum.gt(zero)) {
+      if (sum.gt(bnZero)) {
         for (const [delegatorAddress, delegatorStake] of Object.entries(this.currentState.stake)) {
           this.currentState.relativeWeight[delegatorAddress] = bnDivideAsNumber(delegatorStake, sum);
         }

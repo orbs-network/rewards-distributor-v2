@@ -1,6 +1,9 @@
 import BN from 'bn.js';
-import { EventData } from 'web3-eth-contract';
+import { EventData, Contract } from 'web3-eth-contract';
 import pLimit from 'p-limit';
+import Web3 from 'web3';
+import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/release/compiled-contracts';
+import { bnZero, bnDivideAsNumber } from './helpers';
 
 export interface DelegationChangeEvent {
   block: number;
@@ -43,11 +46,31 @@ export class EventHistory {
 
 const DEFAULT_CONCURRENCY = 5;
 
+export interface EthereumContractAddresses {
+  Committee: string;
+}
+
+interface EthereumContracts {
+  Committee: Contract;
+}
+
 export class HistoryDownloader {
   public history: EventHistory;
+  private ethereumContracts?: EthereumContracts;
 
-  constructor(delegateAddress: string, startingBlock: number) {
+  constructor(
+    delegateAddress: string,
+    startingBlock: number,
+    ethereumContractAddresses?: EthereumContractAddresses,
+    private web3?: Web3
+  ) {
     this.history = new EventHistory(delegateAddress, startingBlock);
+    if (ethereumContractAddresses && web3) {
+      // TODO: replace this line with a nicer way to get the abi's
+      this.ethereumContracts = {
+        Committee: new web3.eth.Contract(compiledContracts.Committee.abi, ethereumContractAddresses.Committee),
+      };
+    }
   }
 
   // returns the last processed block number in the new batch
@@ -56,6 +79,7 @@ export class HistoryDownloader {
       concurrency = DEFAULT_CONCURRENCY;
     }
 
+    // TODO: we now support multiple concurrent requests, also look into request batching https://web3js.readthedocs.io/en/v1.2.6/web3.html#batchrequest
     const limit = pLimit(concurrency);
     const fromBlock = this.history.lastProcessedBlock + 1;
     const toBlock = Math.min(this.history.lastProcessedBlock + maxBlocksInBatch, latestEthereumBlock);
@@ -64,40 +88,52 @@ export class HistoryDownloader {
     }
 
     const requests = [];
-    requests[0] = limit(() => this._processReadEventsWithWeb3('C1', 'E1', fromBlock, toBlock));
-    requests[1] = limit(() => this._processReadEventsWithWeb3('C2', 'E2', fromBlock, toBlock));
-    requests[2] = limit(() => this._processReadEventsWithWeb3('C3', 'E3', fromBlock, toBlock));
+    requests[0] = limit(() => this._processReadEventsWithWeb3('Committee', 'CommitteeChanged', fromBlock, toBlock));
 
     const results = await Promise.all(requests);
-    this._parseE1Events(results[0]);
-    this._parseE2Events(results[1]);
-    this._parseE3Events(results[2]);
+    this._parseCommitteeEvents(results[0]);
 
     this.history.lastProcessedBlock = toBlock;
     return this.history.lastProcessedBlock;
   }
 
   async _processReadEventsWithWeb3(
-    contract: string,
+    contract: 'Committee',
     event: string,
     fromBlock: number,
     toBlock: number
   ): Promise<EventData[]> {
-    // temp just for lint
-    await new Promise((resolve) => {
-      resolve();
+    if (!this.ethereumContracts) {
+      throw new Error(`Ethereum contracts are undefined.`);
+    }
+    const ethereumContract = this.ethereumContracts[contract];
+    const res = await ethereumContract.getPastEvents(event, {
+      fromBlock: fromBlock,
+      toBlock: toBlock,
     });
-    return [];
+    return res;
   }
 
-  _parseE1Events(events: EventData[]) {
-    return [];
-  }
-  _parseE2Events(events: EventData[]) {
-    return [];
-  }
-  _parseE3Events(events: EventData[]) {
-    return [];
+  _parseCommitteeEvents(events: EventData[]) {
+    for (const event of events) {
+      const totalWeight = new BN(0);
+      let delegateWeight = new BN(0);
+      for (let i = 0; i < event.returnValues.addrs.length; i++) {
+        const weight = new BN(event.returnValues.weights[i]);
+        totalWeight.iadd(weight);
+        if (event.returnValues.addrs[i].toLowerCase() == this.history.delegateAddress.toLowerCase()) {
+          delegateWeight = weight;
+        }
+      }
+      let newRelativeWeightInCommittee = 0;
+      if (totalWeight.gt(bnZero)) {
+        newRelativeWeightInCommittee = bnDivideAsNumber(delegateWeight, totalWeight);
+      }
+      this.history.committeeChangeEvents.push({
+        block: event.blockNumber,
+        newRelativeWeightInCommittee: newRelativeWeightInCommittee,
+      });
+    }
   }
 }
 
