@@ -48,10 +48,12 @@ const DEFAULT_CONCURRENCY = 5;
 
 export interface EthereumContractAddresses {
   Committee: string;
+  StakingRewards: string;
 }
 
 interface EthereumContracts {
   Committee: Contract;
+  StakingRewards: Contract;
 }
 
 export class HistoryDownloader {
@@ -69,11 +71,16 @@ export class HistoryDownloader {
       // TODO: replace this line with a nicer way to get the abi's
       this.ethereumContracts = {
         Committee: new web3.eth.Contract(compiledContracts.Committee.abi, ethereumContractAddresses.Committee),
+        StakingRewards: new web3.eth.Contract(
+          compiledContracts.StakingRewards.abi,
+          ethereumContractAddresses.StakingRewards
+        ),
       };
     }
   }
 
   // returns the last processed block number in the new batch
+  // if maxBlocksInBatch is too big, exception will be thrown and up to caller to make it smaller
   async processNextBatch(maxBlocksInBatch: number, latestEthereumBlock: number, concurrency?: number): Promise<number> {
     if (!concurrency) {
       concurrency = DEFAULT_CONCURRENCY;
@@ -88,17 +95,22 @@ export class HistoryDownloader {
     }
 
     const requests = [];
-    requests[0] = limit(() => this._processReadEventsWithWeb3('Committee', 'CommitteeChanged', fromBlock, toBlock));
+    requests[0] = limit(() => this._web3ReadEvents('Committee', 'CommitteeChanged', fromBlock, toBlock));
+    requests[1] = limit(() => this._web3ReadEvents('StakingRewards', 'StakingRewardAssigned', fromBlock, toBlock));
+    requests[2] = limit(() => this._web3ReadEvents('StakingRewards', 'StakingRewardsDistributed', fromBlock, toBlock));
 
     const results = await Promise.all(requests);
-    this._parseCommitteeEvents(results[0]);
+    this._parseCommitteeChangedEvents(results[0]);
+    this._parseRewardsAssignedEvents(results[1]);
+    this._parseRewardsDistributedEvents(results[2]);
 
     this.history.lastProcessedBlock = toBlock;
     return this.history.lastProcessedBlock;
   }
 
-  async _processReadEventsWithWeb3(
-    contract: 'Committee',
+  // TODO: add support for filters when ready (to optimize)
+  async _web3ReadEvents(
+    contract: 'Committee' | 'StakingRewards',
     event: string,
     fromBlock: number,
     toBlock: number
@@ -114,8 +126,9 @@ export class HistoryDownloader {
     return res;
   }
 
-  _parseCommitteeEvents(events: EventData[]) {
+  _parseCommitteeChangedEvents(events: EventData[]) {
     for (const event of events) {
+      // for debug: console.log(event.blockNumber, event.returnValues);
       const totalWeight = new BN(0);
       let delegateWeight = new BN(0);
       for (let i = 0; i < event.returnValues.addrs.length; i++) {
@@ -132,6 +145,39 @@ export class HistoryDownloader {
       this.history.committeeChangeEvents.push({
         block: event.blockNumber,
         newRelativeWeightInCommittee: newRelativeWeightInCommittee,
+      });
+    }
+  }
+
+  _parseRewardsAssignedEvents(events: EventData[]) {
+    for (const event of events) {
+      // for debug: console.log(event.blockNumber, event.returnValues);
+      if (event.returnValues.assignee.toLowerCase() != this.history.delegateAddress.toLowerCase()) continue;
+      this.history.assignmentEvents.push({
+        block: event.blockNumber,
+        amount: new BN(event.returnValues.amount),
+      });
+    }
+  }
+
+  _parseRewardsDistributedEvents(events: EventData[]) {
+    for (const event of events) {
+      // for debug: console.log(event.blockNumber, event.returnValues);
+      if (event.returnValues.distributer.toLowerCase() != this.history.delegateAddress.toLowerCase()) continue;
+      const recipientAddresses = [];
+      const amounts = [];
+      for (let i = 0; i < event.returnValues.to.length; i++) {
+        recipientAddresses.push(event.returnValues.to[i]);
+        amounts.push(new BN(event.returnValues.amounts));
+      }
+      this.history.distributionEvents.push({
+        block: event.blockNumber,
+        recipientAddresses: recipientAddresses,
+        amounts: amounts,
+        batchFirstBlock: parseInt(event.returnValues.fromBlock),
+        batchLastBlock: parseInt(event.returnValues.toBlock),
+        batchSplit: { fractionForDelegators: parseInt(event.returnValues.split) / 1000 / 100 }, // 70000 = 70% = 0.7
+        batchTxIndex: parseInt(event.returnValues.txIndex),
       });
     }
   }

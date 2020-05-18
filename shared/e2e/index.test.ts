@@ -30,7 +30,7 @@ describe('e2e', () => {
     );
     let maxProcessedBlock = 0;
     while (maxProcessedBlock < latestEthereumBlock) {
-      maxProcessedBlock = await historyDownloader.processNextBatch(10, latestEthereumBlock);
+      maxProcessedBlock = await historyDownloader.processNextBatch(100, latestEthereumBlock);
       log(`Processed up to block: ${maxProcessedBlock}`);
     }
     console.log(historyDownloader.history);

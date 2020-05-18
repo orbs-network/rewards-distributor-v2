@@ -8,37 +8,37 @@ describe('HistoryDownloader', () => {
 
   it('fails if no more blocks to download', async () => {
     const d = new HistoryDownloader('G1', 0);
-    jest.spyOn(d, '_processReadEventsWithWeb3').mockImplementation(async () => {
+    jest.spyOn(d, '_web3ReadEvents').mockImplementation(async () => {
       return Promise.resolve([]);
     });
     d.history.lastProcessedBlock = 10;
     await expect(d.processNextBatch(100, 10)).rejects.toBeInstanceOf(Error);
-    expect(d._processReadEventsWithWeb3).not.toBeCalled();
+    expect(d._web3ReadEvents).not.toBeCalled();
   });
 
   it('downloads correct block range when page size is large', async () => {
     const d = new HistoryDownloader('G1', 0);
-    jest.spyOn(d, '_processReadEventsWithWeb3').mockImplementation(async () => {
+    jest.spyOn(d, '_web3ReadEvents').mockImplementation(async () => {
       return Promise.resolve([]);
     });
     d.history.lastProcessedBlock = 10;
     expect(await d.processNextBatch(100, 20)).toEqual(20);
-    expect(d._processReadEventsWithWeb3).toHaveBeenCalledWith(expect.anything(), expect.anything(), 11, 20);
+    expect(d._web3ReadEvents).toHaveBeenCalledWith(expect.anything(), expect.anything(), 11, 20);
   });
 
   it('downloads correct block range when page size is small', async () => {
     const d = new HistoryDownloader('G1', 0);
-    jest.spyOn(d, '_processReadEventsWithWeb3').mockImplementation(async () => {
+    jest.spyOn(d, '_web3ReadEvents').mockImplementation(async () => {
       return Promise.resolve([]);
     });
     d.history.lastProcessedBlock = 10;
     expect(await d.processNextBatch(5, 20)).toEqual(15);
-    expect(d._processReadEventsWithWeb3).toHaveBeenCalledWith(expect.anything(), expect.anything(), 11, 15);
+    expect(d._web3ReadEvents).toHaveBeenCalledWith(expect.anything(), expect.anything(), 11, 15);
   });
 
   it('forwards errors', async () => {
     const d = new HistoryDownloader('G1', 0);
-    jest.spyOn(d, '_processReadEventsWithWeb3').mockImplementation(() => {
+    jest.spyOn(d, '_web3ReadEvents').mockImplementation(() => {
       throw new Error('network connection error');
     });
     d.history.lastProcessedBlock = 10;

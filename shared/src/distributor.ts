@@ -146,7 +146,7 @@ export class Distribution {
       const recipientAddresses = _.take(allSortedRecipients, numRecipientsInTx);
       const amounts = _.take(allSortedAmounts, numRecipientsInTx);
       try {
-        await this._processSendTransactionWithWeb3(recipientAddresses, amounts);
+        await this._web3SendTransaction(recipientAddresses, amounts);
         if (recipientAddresses.length == allSortedRecipients.length) return true;
         else return false;
       } catch (e) {
@@ -162,11 +162,7 @@ export class Distribution {
   }
 
   // tries to send multiple times
-  async _processSendTransactionWithWeb3(
-    recipientAddresses: string[],
-    amounts: BN[],
-    progressCallback?: TxProgressNotification
-  ) {
+  async _web3SendTransaction(recipientAddresses: string[], amounts: BN[], progressCallback?: TxProgressNotification) {
     // temp just for lint
     await new Promise((resolve) => {
       resolve();

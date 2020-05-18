@@ -174,79 +174,76 @@ describe('sendNextTransaction', () => {
   it('sends to the remaining recipients only', async () => {
     const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
-    jest.spyOn(d, '_processSendTransactionWithWeb3').mockImplementation(async () => {
+    jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
       return Promise.resolve();
     });
     expect(await d.sendNextTransaction(10)).toBe(true);
-    expect(d._processSendTransactionWithWeb3).toHaveBeenCalledWith(
-      ['D1', 'D3', 'G1'],
-      [new BN(100), new BN(300), new BN(0)]
-    );
+    expect(d._web3SendTransaction).toHaveBeenCalledWith(['D1', 'D3', 'G1'], [new BN(100), new BN(300), new BN(0)]);
   });
 
   it('does not send if no remaining', async () => {
     const d = Distribution.getLast(20, getHistoryWithCompleteDistribution());
     if (d == null) fail();
-    jest.spyOn(d, '_processSendTransactionWithWeb3').mockImplementation(async () => {
+    jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
       return Promise.resolve();
     });
     expect(await d.sendNextTransaction(10)).toBe(true);
-    expect(d._processSendTransactionWithWeb3).not.toHaveBeenCalled();
+    expect(d._web3SendTransaction).not.toHaveBeenCalled();
   });
 
   it('respects limited number of recipients per tx', async () => {
     const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
-    jest.spyOn(d, '_processSendTransactionWithWeb3').mockImplementation(async () => {
+    jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
       return Promise.resolve();
     });
     expect(await d.sendNextTransaction(2)).toBe(false);
-    expect(d._processSendTransactionWithWeb3).toHaveBeenCalledWith(['D1', 'D3'], [new BN(100), new BN(300)]);
+    expect(d._web3SendTransaction).toHaveBeenCalledWith(['D1', 'D3'], [new BN(100), new BN(300)]);
   });
 
   it('reduces number of recipients if process fails due to too many', async () => {
     const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
-    jest.spyOn(d, '_processSendTransactionWithWeb3').mockImplementationOnce(() => {
+    jest.spyOn(d, '_web3SendTransaction').mockImplementationOnce(() => {
       throw new TooManyRecipientsError();
     });
-    jest.spyOn(d, '_processSendTransactionWithWeb3').mockImplementation(async () => {
+    jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
       return Promise.resolve();
     });
     expect(await d.sendNextTransaction(10)).toBe(false);
-    expect(d._processSendTransactionWithWeb3).toBeCalledTimes(2);
-    expect(d._processSendTransactionWithWeb3).toHaveBeenNthCalledWith(
+    expect(d._web3SendTransaction).toBeCalledTimes(2);
+    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(
       1,
       ['D1', 'D3', 'G1'],
       [new BN(100), new BN(300), new BN(0)]
     );
-    expect(d._processSendTransactionWithWeb3).toHaveBeenNthCalledWith(2, ['D1', 'D3'], [new BN(100), new BN(300)]);
+    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(2, ['D1', 'D3'], [new BN(100), new BN(300)]);
   });
 
   it('keeps reducing number of recipients if process keeps failing and ultimately fails', async () => {
     const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
-    jest.spyOn(d, '_processSendTransactionWithWeb3').mockImplementation(() => {
+    jest.spyOn(d, '_web3SendTransaction').mockImplementation(() => {
       throw new TooManyRecipientsError();
     });
     await expect(d.sendNextTransaction(10)).rejects.toBeInstanceOf(Error);
-    expect(d._processSendTransactionWithWeb3).toBeCalledTimes(3);
-    expect(d._processSendTransactionWithWeb3).toHaveBeenNthCalledWith(
+    expect(d._web3SendTransaction).toBeCalledTimes(3);
+    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(
       1,
       ['D1', 'D3', 'G1'],
       [new BN(100), new BN(300), new BN(0)]
     );
-    expect(d._processSendTransactionWithWeb3).toHaveBeenNthCalledWith(2, ['D1', 'D3'], [new BN(100), new BN(300)]);
-    expect(d._processSendTransactionWithWeb3).toHaveBeenNthCalledWith(3, ['D1'], [new BN(100)]);
+    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(2, ['D1', 'D3'], [new BN(100), new BN(300)]);
+    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(3, ['D1'], [new BN(100)]);
   });
 
   it('forwards errors', async () => {
     const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
-    jest.spyOn(d, '_processSendTransactionWithWeb3').mockImplementation(() => {
+    jest.spyOn(d, '_web3SendTransaction').mockImplementation(() => {
       throw new Error('network connection error');
     });
     await expect(d.sendNextTransaction(10)).rejects.toEqual(new Error('network connection error'));
-    expect(d._processSendTransactionWithWeb3).toBeCalledTimes(1);
+    expect(d._web3SendTransaction).toBeCalledTimes(1);
   });
 });
