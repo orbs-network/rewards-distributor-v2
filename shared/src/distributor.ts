@@ -2,6 +2,11 @@ import _ from 'lodash';
 import { EventHistory, Split } from './history';
 import { Division, Calculator } from './calculator';
 import BN from 'bn.js';
+import { EthereumContractAddresses } from '.';
+import { Contract } from 'web3-eth-contract';
+import { TransactionReceipt } from 'web3-core';
+import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/release/compiled-contracts';
+import Web3 from 'web3';
 
 const DEFAULT_NUM_RECIPIENTS_PER_TX = 10;
 const REDUCE_TOO_MANY_RECIPIENTS_BY = 0.8;
@@ -68,6 +73,9 @@ export class Distribution {
 
   public division: Division;
   private startScanningFromIndex = 0; // optimization, the index we can start scanning from to find history events
+  private ethereumContracts?: {
+    StakingRewards: Contract;
+  };
 
   private constructor(
     public firstBlock: number,
@@ -76,6 +84,16 @@ export class Distribution {
     private history: EventHistory
   ) {
     this.division = Calculator.divideBlockPeriod(firstBlock, lastBlock, split, history);
+  }
+
+  setEthereumContracts(web3: Web3, ethereumContractAddresses: EthereumContractAddresses) {
+    // TODO: replace this line with a nicer way to get the abi's
+    this.ethereumContracts = {
+      StakingRewards: new web3.eth.Contract(
+        compiledContracts.StakingRewards.abi,
+        ethereumContractAddresses.StakingRewards
+      ),
+    };
   }
 
   private _searchForEarliestIndex(): number {
@@ -134,27 +152,34 @@ export class Distribution {
     return Object.keys(remaining).length == 0;
   }
 
-  // returns isComplete - false if more transactions need to be sent, true if distribution is finished
-  async sendNextTransaction(numRecipientsInTx?: number, progressCallback?: TxProgressNotification): Promise<boolean> {
+  async sendNextTransaction(
+    numRecipientsInTx?: number,
+    progressCallback?: TxProgressNotification
+  ): Promise<{
+    isComplete: boolean;
+    receipt?: TransactionReceipt;
+  }> {
     if (!numRecipientsInTx) {
       numRecipientsInTx = DEFAULT_NUM_RECIPIENTS_PER_TX;
     }
 
     const [remaining, maxTxIndex] = this._findRemainingRecipients();
-    const allSortedRecipients = _.sortBy(Object.keys(remaining));
-    const allSortedAmounts = _.map(allSortedRecipients, (r) => remaining[r]);
+    const allSortedRemainingRecipients = _.sortBy(Object.keys(remaining));
+    const allSortedRemainingAmounts = _.map(allSortedRemainingRecipients, (r) => remaining[r]);
     const txIndex = maxTxIndex + 1;
 
-    if (allSortedRecipients.length == 0) return true;
-    if (numRecipientsInTx > allSortedRecipients.length) numRecipientsInTx = allSortedRecipients.length;
+    if (allSortedRemainingRecipients.length == 0) return { isComplete: true };
+    if (numRecipientsInTx > allSortedRemainingRecipients.length) {
+      numRecipientsInTx = allSortedRemainingRecipients.length;
+    }
 
     while (numRecipientsInTx > 0) {
-      const recipientAddresses = _.take(allSortedRecipients, numRecipientsInTx);
-      const amounts = _.take(allSortedAmounts, numRecipientsInTx);
+      const recipientAddresses = _.take(allSortedRemainingRecipients, numRecipientsInTx);
+      const amounts = _.take(allSortedRemainingAmounts, numRecipientsInTx);
       try {
-        await this._web3SendTransaction(recipientAddresses, amounts, txIndex, progressCallback);
-        if (recipientAddresses.length == allSortedRecipients.length) return true;
-        else return false;
+        const receipt = await this._web3SendTransaction(recipientAddresses, amounts, txIndex, progressCallback);
+        const isComplete = recipientAddresses.length == allSortedRemainingRecipients.length;
+        return { isComplete, receipt };
       } catch (e) {
         if (e instanceof TooManyRecipientsError) {
           numRecipientsInTx = Math.floor(numRecipientsInTx * REDUCE_TOO_MANY_RECIPIENTS_BY);
@@ -173,11 +198,37 @@ export class Distribution {
     amounts: BN[],
     txIndex: number,
     progressCallback?: TxProgressNotification
-  ) {
-    // temp just for lint
-    await new Promise((resolve) => {
-      resolve();
-    });
+  ): Promise<TransactionReceipt> {
+    if (!this.ethereumContracts) {
+      throw new Error(`Ethereum contracts are undefined, did you call setEthereumContracts?`);
+    }
+
+    const totalAmount = new BN(0);
+    for (const amount of amounts) {
+      totalAmount.iadd(amount);
+    }
+
+    try {
+      const receipt = await this.ethereumContracts.StakingRewards.methods
+        .distributeOrbsTokenRewards(
+          totalAmount.toString(), // uint256 totalAmount
+          this.firstBlock, // uint256 fromBlock
+          this.lastBlock, // uint256 toBlock
+          Math.round(this.split.fractionForDelegators * 100 * 1000), // uint split
+          txIndex, // uint txIndex
+          recipientAddresses, // address[] calldata to
+          _.map(amounts, (bn) => bn.toString()) // uint256[] calldata amounts
+        )
+        .send({
+          from: this.history.delegateAddress,
+          gas: 0x7fffffff, // TODO: improve
+        });
+      return receipt;
+    } catch (e) {
+      // TODO: catch out of gas and throw TooManyRecipientsError
+      console.log(e);
+      throw e;
+    }
   }
 }
 

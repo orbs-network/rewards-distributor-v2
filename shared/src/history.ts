@@ -4,6 +4,7 @@ import pLimit from 'p-limit';
 import Web3 from 'web3';
 import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/release/compiled-contracts';
 import { bnZero, bnDivideAsNumber } from './helpers';
+import { EthereumContractAddresses } from '.';
 
 export interface DelegationChangeEvent {
   block: number;
@@ -46,37 +47,26 @@ export class EventHistory {
 
 const DEFAULT_CONCURRENCY = 5;
 
-export interface EthereumContractAddresses {
-  Committee: string;
-  StakingRewards: string;
-}
-
-interface EthereumContracts {
-  Committee: Contract;
-  StakingRewards: Contract;
-}
-
 export class HistoryDownloader {
   public history: EventHistory;
-  private ethereumContracts?: EthereumContracts;
+  private ethereumContracts?: {
+    Committee: Contract;
+    StakingRewards: Contract;
+  };
 
-  constructor(
-    delegateAddress: string,
-    startingBlock: number,
-    ethereumContractAddresses?: EthereumContractAddresses,
-    private web3?: Web3
-  ) {
+  constructor(delegateAddress: string, startingBlock: number) {
     this.history = new EventHistory(delegateAddress, startingBlock);
-    if (ethereumContractAddresses && web3) {
-      // TODO: replace this line with a nicer way to get the abi's
-      this.ethereumContracts = {
-        Committee: new web3.eth.Contract(compiledContracts.Committee.abi, ethereumContractAddresses.Committee),
-        StakingRewards: new web3.eth.Contract(
-          compiledContracts.StakingRewards.abi,
-          ethereumContractAddresses.StakingRewards
-        ),
-      };
-    }
+  }
+
+  setEthereumContracts(web3: Web3, ethereumContractAddresses: EthereumContractAddresses) {
+    // TODO: replace this line with a nicer way to get the abi's
+    this.ethereumContracts = {
+      Committee: new web3.eth.Contract(compiledContracts.Committee.abi, ethereumContractAddresses.Committee),
+      StakingRewards: new web3.eth.Contract(
+        compiledContracts.StakingRewards.abi,
+        ethereumContractAddresses.StakingRewards
+      ),
+    };
   }
 
   // returns the last processed block number in the new batch
@@ -116,7 +106,7 @@ export class HistoryDownloader {
     toBlock: number
   ): Promise<EventData[]> {
     if (!this.ethereumContracts) {
-      throw new Error(`Ethereum contracts are undefined.`);
+      throw new Error(`Ethereum contracts are undefined, did you call setEthereumContracts?`);
     }
     const ethereumContract = this.ethereumContracts[contract];
     const res = await ethereumContract.getPastEvents(event, {

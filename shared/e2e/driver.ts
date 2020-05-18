@@ -1,6 +1,6 @@
-import { ganacheDriver, Driver as OrbsV2Driver } from '@orbs-network/orbs-ethereum-contracts-v2';
+import { Driver as OrbsV2Driver } from '@orbs-network/orbs-ethereum-contracts-v2';
 import { Web3Driver } from '@orbs-network/orbs-ethereum-contracts-v2/release/eth';
-import { EthereumContractAddresses } from '../src/history';
+import { EthereumContractAddresses } from '../src';
 import Web3 from 'web3';
 
 const SCENARIO_MAX_STANDBYS = 3;
@@ -8,20 +8,10 @@ const SCENARIO_MAX_COMMITTEE_SIZE = 3;
 const MONTH_IN_SECONDS = 60 * 60 * 24 * 30;
 
 export class TestkitDriver {
-  static async setup() {
-    await ganacheDriver.startGanache();
-  }
-
-  static async teardown() {
-    await ganacheDriver.stopGanache();
-    // sleep 2 seconds for Ganache to fully stop
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }
-
-  public ethereumContractAddresses?: EthereumContractAddresses;
-  public delegateAddress?: string;
   public web3: Web3;
   private orbsV2Driver?: OrbsV2Driver;
+  public ethereumContractAddresses?: EthereumContractAddresses;
+  public delegateAddress?: string;
 
   constructor() {
     this.web3 = new Web3('http://localhost:7545');
@@ -91,6 +81,15 @@ export class TestkitDriver {
     // assign rewards (TODO: this will become automatic)
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS * 4);
     await d.stakingRewards.assignRewards();
+  }
+
+  async getNewDistributionEvents(fromBlock: number) {
+    const res = await this.orbsV2Driver?.stakingRewards.web3Contract.getPastEvents('StakingRewardsDistributed', {
+      fromBlock: fromBlock,
+      toBlock: 'latest',
+    });
+    if (!res) return [];
+    return res;
   }
 }
 

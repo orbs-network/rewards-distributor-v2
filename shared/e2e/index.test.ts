@@ -1,39 +1,66 @@
 import { TestkitDriver } from './driver';
-import { HistoryDownloader } from '../src/history';
+import { HistoryDownloader, Distribution } from '../src';
 
 jest.setTimeout(60000);
 
 describe('e2e', () => {
-  log('Starting e2e..');
   const driver = new TestkitDriver();
 
   beforeAll(async () => {
-    log('Deploying Orbs PoS V2 contracts..');
+    log('deploying Orbs PoS V2 contracts');
     await driver.deployOrbsV2Contracts();
-    log('Preparing the scenario..');
+    log('preparing the scenario');
     await driver.prepareScenario();
-    log('Starting actual tests..');
   });
 
   afterAll(async () => {
     await driver.closeConnections();
   });
 
-  it('distributes rewards with multiple transactions', async () => {
+  it('starts a new rewards distribution with multiple transactions', async () => {
+    // get latest ethereum block
     const latestEthereumBlock = await driver.web3.eth.getBlockNumber();
-    log(`Latest ethereum block: ${latestEthereumBlock}`);
-    const historyDownloader = new HistoryDownloader(
-      driver.delegateAddress!,
-      0,
-      driver.ethereumContractAddresses,
-      driver.web3
-    );
+    log(`latest ethereum block: ${latestEthereumBlock}`);
+
+    // create a history downloader
+    const historyDownloader = new HistoryDownloader(driver.delegateAddress!, 0);
+    historyDownloader.setEthereumContracts(driver.web3, driver.ethereumContractAddresses!);
+
+    // download history up to this block
     let maxProcessedBlock = 0;
     while (maxProcessedBlock < latestEthereumBlock) {
       maxProcessedBlock = await historyDownloader.processNextBatch(100, latestEthereumBlock);
-      log(`Processed up to block: ${maxProcessedBlock}`);
+      log(`processed up to block: ${maxProcessedBlock}`);
     }
+
     console.log(historyDownloader.history);
+
+    // create a new distribution of rewards up to this block
+    const distribution = Distribution.startNew(
+      latestEthereumBlock,
+      { fractionForDelegators: 0.7 },
+      historyDownloader.history
+    );
+    distribution.setEthereumContracts(driver.web3, driver.ethereumContractAddresses!);
+
+    // send distribution transactions
+    let done = false;
+    while (!done) {
+      const { isComplete, receipt } = await distribution.sendNextTransaction(3);
+      done = isComplete;
+      log(`sent distribution transaction: ${receipt!.transactionHash}`);
+    }
+
+    // verify the new distribution events
+    const events = await driver.getNewDistributionEvents(latestEthereumBlock + 1);
+    expect(events.length).toEqual(1);
+    expect(events[0].returnValues).toHaveProperty('distributer', driver.delegateAddress);
+    expect(events[0].returnValues).toHaveProperty('fromBlock', '0');
+    expect(events[0].returnValues).toHaveProperty('toBlock', latestEthereumBlock.toString());
+    expect(events[0].returnValues).toHaveProperty('split', '70000');
+    expect(events[0].returnValues).toHaveProperty('txIndex', '0');
+    console.log(events[0].returnValues.to);
+    console.log(events[0].returnValues.amounts);
   });
 });
 

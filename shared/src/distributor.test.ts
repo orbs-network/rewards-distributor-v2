@@ -186,9 +186,9 @@ describe('sendNextTransaction', () => {
     const d = Distribution.startNew(20, { fractionForDelegators: 1 }, getHistoryWithUnstartedDistribution());
     if (d == null) fail();
     jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
-      return Promise.resolve();
+      return Promise.resolve(getMockReceipt());
     });
-    expect(await d.sendNextTransaction(10)).toBe(true);
+    expect(await d.sendNextTransaction(10)).toHaveProperty('isComplete', true);
     expect(d._web3SendTransaction).toHaveBeenCalledWith(
       ['D1', 'D2', 'D3', 'G1'],
       [new BN(100), new BN(200), new BN(300), new BN(0)],
@@ -201,9 +201,9 @@ describe('sendNextTransaction', () => {
     const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
     jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
-      return Promise.resolve();
+      return Promise.resolve(getMockReceipt());
     });
-    expect(await d.sendNextTransaction(10)).toBe(true);
+    expect(await d.sendNextTransaction(10)).toHaveProperty('isComplete', true);
     expect(d._web3SendTransaction).toHaveBeenCalledWith(
       ['D1', 'D3', 'G1'],
       [new BN(100), new BN(300), new BN(0)],
@@ -216,9 +216,9 @@ describe('sendNextTransaction', () => {
     const d = Distribution.getLast(20, getHistoryWithCompleteDistribution());
     if (d == null) fail();
     jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
-      return Promise.resolve();
+      return Promise.resolve(getMockReceipt());
     });
-    expect(await d.sendNextTransaction(10)).toBe(true);
+    expect(await d.sendNextTransaction(10)).toHaveProperty('isComplete', true);
     expect(d._web3SendTransaction).not.toHaveBeenCalled();
   });
 
@@ -226,9 +226,9 @@ describe('sendNextTransaction', () => {
     const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
     jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
-      return Promise.resolve();
+      return Promise.resolve(getMockReceipt());
     });
-    expect(await d.sendNextTransaction(2)).toBe(false);
+    expect(await d.sendNextTransaction(2)).toHaveProperty('isComplete', false);
     expect(d._web3SendTransaction).toHaveBeenCalledWith(['D1', 'D3'], [new BN(100), new BN(300)], 1, undefined);
   });
 
@@ -239,9 +239,9 @@ describe('sendNextTransaction', () => {
       throw new TooManyRecipientsError();
     });
     jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
-      return Promise.resolve();
+      return Promise.resolve(getMockReceipt());
     });
-    expect(await d.sendNextTransaction(10)).toBe(false);
+    expect(await d.sendNextTransaction(10)).toHaveProperty('isComplete', false);
     expect(d._web3SendTransaction).toBeCalledTimes(2);
     expect(d._web3SendTransaction).toHaveBeenNthCalledWith(
       1,
@@ -282,3 +282,19 @@ describe('sendNextTransaction', () => {
     expect(d._web3SendTransaction).toBeCalledTimes(1);
   });
 });
+
+const getMockReceipt = () => {
+  return {
+    status: false,
+    transactionHash: '1111',
+    transactionIndex: 1,
+    blockHash: '2222',
+    blockNumber: 4,
+    from: '0xaaaa',
+    to: '0xbbbb',
+    cumulativeGasUsed: 100,
+    gasUsed: 100,
+    logs: [],
+    logsBloom: '0xcccc',
+  };
+};
