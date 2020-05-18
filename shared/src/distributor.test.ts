@@ -166,19 +166,50 @@ describe('startNew', () => {
   });
 });
 
+const getHistoryWithUnstartedDistribution = () => {
+  const h = new EventHistory('G1', 1);
+  h.assignmentEvents.push({ block: 5, amount: new BN(600) });
+  h.committeeChangeEvents.push({ block: 1, newRelativeWeightInCommittee: 0.5 });
+  h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D1', newDelegatedStake: new BN(1000) });
+  h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D2', newDelegatedStake: new BN(2000) });
+  h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D3', newDelegatedStake: new BN(3000) });
+  h.lastProcessedBlock = 20;
+  return h;
+};
+
 describe('sendNextTransaction', () => {
   beforeEach(() => {
     jest.restoreAllMocks();
   });
 
-  it('sends to the remaining recipients only', async () => {
+  it('sends to the first recipients if none received', async () => {
+    const d = Distribution.startNew(20, { fractionForDelegators: 1 }, getHistoryWithUnstartedDistribution());
+    if (d == null) fail();
+    jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
+      return Promise.resolve();
+    });
+    expect(await d.sendNextTransaction(10)).toBe(true);
+    expect(d._web3SendTransaction).toHaveBeenCalledWith(
+      ['D1', 'D2', 'D3', 'G1'],
+      [new BN(100), new BN(200), new BN(300), new BN(0)],
+      0,
+      undefined
+    );
+  });
+
+  it('sends only to the remaining recipients if some already received', async () => {
     const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
     jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
       return Promise.resolve();
     });
     expect(await d.sendNextTransaction(10)).toBe(true);
-    expect(d._web3SendTransaction).toHaveBeenCalledWith(['D1', 'D3', 'G1'], [new BN(100), new BN(300), new BN(0)]);
+    expect(d._web3SendTransaction).toHaveBeenCalledWith(
+      ['D1', 'D3', 'G1'],
+      [new BN(100), new BN(300), new BN(0)],
+      1,
+      undefined
+    );
   });
 
   it('does not send if no remaining', async () => {
@@ -198,7 +229,7 @@ describe('sendNextTransaction', () => {
       return Promise.resolve();
     });
     expect(await d.sendNextTransaction(2)).toBe(false);
-    expect(d._web3SendTransaction).toHaveBeenCalledWith(['D1', 'D3'], [new BN(100), new BN(300)]);
+    expect(d._web3SendTransaction).toHaveBeenCalledWith(['D1', 'D3'], [new BN(100), new BN(300)], 1, undefined);
   });
 
   it('reduces number of recipients if process fails due to too many', async () => {
@@ -215,9 +246,11 @@ describe('sendNextTransaction', () => {
     expect(d._web3SendTransaction).toHaveBeenNthCalledWith(
       1,
       ['D1', 'D3', 'G1'],
-      [new BN(100), new BN(300), new BN(0)]
+      [new BN(100), new BN(300), new BN(0)],
+      1,
+      undefined
     );
-    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(2, ['D1', 'D3'], [new BN(100), new BN(300)]);
+    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(2, ['D1', 'D3'], [new BN(100), new BN(300)], 1, undefined);
   });
 
   it('keeps reducing number of recipients if process keeps failing and ultimately fails', async () => {
@@ -231,10 +264,12 @@ describe('sendNextTransaction', () => {
     expect(d._web3SendTransaction).toHaveBeenNthCalledWith(
       1,
       ['D1', 'D3', 'G1'],
-      [new BN(100), new BN(300), new BN(0)]
+      [new BN(100), new BN(300), new BN(0)],
+      1,
+      undefined
     );
-    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(2, ['D1', 'D3'], [new BN(100), new BN(300)]);
-    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(3, ['D1'], [new BN(100)]);
+    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(2, ['D1', 'D3'], [new BN(100), new BN(300)], 1, undefined);
+    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(3, ['D1'], [new BN(100)], 1, undefined);
   });
 
   it('forwards errors', async () => {

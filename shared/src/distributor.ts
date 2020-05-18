@@ -112,21 +112,25 @@ export class Distribution {
   }
 
   // returns all recipients that were not paid yet
-  private _findRemainingRecipients(): { [recipientAddress: string]: BN } {
-    const res = _.clone(this.division.amounts);
+  private _findRemainingRecipients(): [{ [recipientAddress: string]: BN }, number] {
+    const resAmounts = _.clone(this.division.amounts);
+    let resMaxTxIndex = -1;
     for (let index = this.startScanningFromIndex; index < this.history.distributionEvents.length; index++) {
       const event = this.history.distributionEvents[index];
       if (event.batchFirstBlock == this.firstBlock && event.batchLastBlock == this.lastBlock) {
         for (let j = 0; j < event.recipientAddresses.length; j++) {
-          delete res[event.recipientAddresses[j]];
+          delete resAmounts[event.recipientAddresses[j]];
+        }
+        if (event.batchTxIndex > resMaxTxIndex) {
+          resMaxTxIndex = event.batchTxIndex;
         }
       }
     }
-    return res;
+    return [resAmounts, resMaxTxIndex];
   }
 
   isComplete(): boolean {
-    const remaining = this._findRemainingRecipients();
+    const [remaining] = this._findRemainingRecipients();
     return Object.keys(remaining).length == 0;
   }
 
@@ -136,9 +140,11 @@ export class Distribution {
       numRecipientsInTx = DEFAULT_NUM_RECIPIENTS_PER_TX;
     }
 
-    const remaining = this._findRemainingRecipients();
+    const [remaining, maxTxIndex] = this._findRemainingRecipients();
     const allSortedRecipients = _.sortBy(Object.keys(remaining));
     const allSortedAmounts = _.map(allSortedRecipients, (r) => remaining[r]);
+    const txIndex = maxTxIndex + 1;
+
     if (allSortedRecipients.length == 0) return true;
     if (numRecipientsInTx > allSortedRecipients.length) numRecipientsInTx = allSortedRecipients.length;
 
@@ -146,7 +152,7 @@ export class Distribution {
       const recipientAddresses = _.take(allSortedRecipients, numRecipientsInTx);
       const amounts = _.take(allSortedAmounts, numRecipientsInTx);
       try {
-        await this._web3SendTransaction(recipientAddresses, amounts);
+        await this._web3SendTransaction(recipientAddresses, amounts, txIndex, progressCallback);
         if (recipientAddresses.length == allSortedRecipients.length) return true;
         else return false;
       } catch (e) {
@@ -161,8 +167,13 @@ export class Distribution {
     throw new Error(`Cannot send next transaction even after reducing num recipients to zero.`);
   }
 
-  // tries to send multiple times
-  async _web3SendTransaction(recipientAddresses: string[], amounts: BN[], progressCallback?: TxProgressNotification) {
+  // progress is a for a single transaction and checks confirmations
+  async _web3SendTransaction(
+    recipientAddresses: string[],
+    amounts: BN[],
+    txIndex: number,
+    progressCallback?: TxProgressNotification
+  ) {
     // temp just for lint
     await new Promise((resolve) => {
       resolve();
