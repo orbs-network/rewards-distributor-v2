@@ -1,4 +1,4 @@
-import { TestkitDriver } from '../src/testkit/driver';
+import { TestkitDriver } from './driver';
 import { HistoryDownloader } from '../src/history';
 
 jest.setTimeout(60000);

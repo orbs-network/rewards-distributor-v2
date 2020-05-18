@@ -1,5 +1,5 @@
 import { ganacheDriver, Driver as OrbsV2Driver } from '@orbs-network/orbs-ethereum-contracts-v2';
-import { EthereumContractAddresses } from '../history';
+import { EthereumContractAddresses } from '../src/history';
 import Web3 from 'web3';
 
 const SCENARIO_MAX_STANDBYS = 3;

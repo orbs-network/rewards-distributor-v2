@@ -1,7 +1,7 @@
 import React from 'react';
 import logo from './logo.svg';
 import './App.css';
-import { sum } from 'rewards-v2/dist/sum';
+import { sum } from 'rewards-v2/dist/src/sum';
 
 function App() {
   return (
