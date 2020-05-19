@@ -10,6 +10,7 @@ import Web3 from 'web3';
 
 const DEFAULT_NUM_RECIPIENTS_PER_TX = 10;
 const REDUCE_TOO_MANY_RECIPIENTS_BY = 0.8;
+const GAS_LIMIT_PER_TX = 0x7fffffff; // TODO: improve
 
 export class Distribution {
   // returns the last distribution if exists, null if no distribution done yet
@@ -221,7 +222,7 @@ export class Distribution {
         )
         .send({
           from: this.history.delegateAddress,
-          gas: 0x7fffffff, // TODO: improve
+          gas: GAS_LIMIT_PER_TX,
         });
       return receipt;
     } catch (e) {

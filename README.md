@@ -43,6 +43,8 @@ TypeScript shared code with all core logic for rewards calcs used by the other p
   npm run stop-ganache
   ```
 
+  > Check if ganache is running with `lsof -iTCP -sTCP:LISTEN -n -P` (look for port 7545)
+
 ### Build and deploy
 
 * Compile shared library:
@@ -54,6 +56,10 @@ TypeScript shared code with all core logic for rewards calcs used by the other p
 ### Calculation algorithm overview
 
 See [ALGORITHM.md](shared/ALGORITHM.md).
+
+### Usage example of this library
+
+See [USAGE.md](shared/USAGE.md).
 
 &nbsp;
 
