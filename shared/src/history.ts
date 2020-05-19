@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import BN from 'bn.js';
 import { EventData, Contract } from 'web3-eth-contract';
 import pLimit from 'p-limit';
@@ -49,13 +50,14 @@ const DEFAULT_CONCURRENCY = 5;
 
 export class HistoryDownloader {
   public history: EventHistory;
+  public extraHistoryPerDelegate: { [delegateAddress: string]: EventHistory } = {}; // optional for additional analytics
   private ethereumContracts?: {
     Committee: Contract;
     Delegations: Contract;
     StakingRewards: Contract;
   };
 
-  constructor(delegateAddress: string, startingBlock: number) {
+  constructor(delegateAddress: string, startingBlock: number, private storeExtraHistoryPerDelegate = false) {
     this.history = new EventHistory(delegateAddress, startingBlock);
   }
 
@@ -93,13 +95,33 @@ export class HistoryDownloader {
     requests[3] = limit(() => this._web3ReadEvents('StakingRewards', 'StakingRewardsDistributed', fromBlock, toBlock));
 
     const results = await Promise.all(requests);
-    this._parseCommitteeChangedEvents(results[0]);
-    this._parseDelegationChangedEvents(results[1]);
-    this._parseRewardsAssignedEvents(results[2]);
-    this._parseRewardsDistributedEvents(results[3]);
+    const d1 = HistoryDownloader._parseCommitteeChangedEvents(results[0], this.history);
+    const d2 = HistoryDownloader._parseDelegationChangedEvents(results[1], this.history);
+    const d3 = HistoryDownloader._parseRewardsAssignedEvents(results[2], this.history);
+    const d4 = HistoryDownloader._parseRewardsDistributedEvents(results[3], this.history);
 
     this.history.lastProcessedBlock = toBlock;
+
+    // parse extra histories for all delegates if required (default no)
+    if (this.storeExtraHistoryPerDelegate) {
+      this._parseExtraHistoriesPerDelegate(_.union(d1, d2, d3, d4), results, toBlock);
+    }
+
     return this.history.lastProcessedBlock;
+  }
+
+  _parseExtraHistoriesPerDelegate(delegates: string[], results: EventData[][], toBlock: number) {
+    for (const delegateAddress of delegates) {
+      if (!this.extraHistoryPerDelegate[delegateAddress]) {
+        this.extraHistoryPerDelegate[delegateAddress] = new EventHistory(delegateAddress, this.history.startingBlock);
+      }
+      const delegateHistory = this.extraHistoryPerDelegate[delegateAddress];
+      HistoryDownloader._parseCommitteeChangedEvents(results[0], delegateHistory);
+      HistoryDownloader._parseDelegationChangedEvents(results[1], delegateHistory);
+      HistoryDownloader._parseRewardsAssignedEvents(results[2], delegateHistory);
+      HistoryDownloader._parseRewardsDistributedEvents(results[3], delegateHistory);
+      delegateHistory.lastProcessedBlock = toBlock;
+    }
   }
 
   // TODO: add support for filters when ready (to optimize)
@@ -120,15 +142,18 @@ export class HistoryDownloader {
     return res;
   }
 
-  _parseCommitteeChangedEvents(events: EventData[]) {
+  // appends events to history, returns all delegates it encountered
+  static _parseCommitteeChangedEvents(events: EventData[], history: EventHistory): string[] {
+    const allDelegates: { [delegateAddress: string]: boolean } = {};
     for (const event of events) {
       // for debug: console.log(event.blockNumber, event.returnValues);
       const totalWeight = new BN(0);
       let delegateWeight = new BN(0);
       for (let i = 0; i < event.returnValues.addrs.length; i++) {
+        allDelegates[event.returnValues.addrs[i]] = true;
         const weight = new BN(event.returnValues.weights[i]);
         totalWeight.iadd(weight);
-        if (event.returnValues.addrs[i].toLowerCase() == this.history.delegateAddress.toLowerCase()) {
+        if (event.returnValues.addrs[i].toLowerCase() == history.delegateAddress.toLowerCase()) {
           delegateWeight = weight;
         }
       }
@@ -136,49 +161,61 @@ export class HistoryDownloader {
       if (totalWeight.gt(bnZero)) {
         newRelativeWeightInCommittee = bnDivideAsNumber(delegateWeight, totalWeight);
       }
-      this.history.committeeChangeEvents.push({
+      history.committeeChangeEvents.push({
         block: event.blockNumber,
         newRelativeWeightInCommittee: newRelativeWeightInCommittee,
       });
     }
+    return Object.keys(allDelegates);
   }
 
-  _parseDelegationChangedEvents(events: EventData[]) {
+  // appends events to history, returns all delegates it encountered
+  static _parseDelegationChangedEvents(events: EventData[], history: EventHistory): string[] {
+    const allDelegates: { [delegateAddress: string]: boolean } = {};
     for (const event of events) {
       // for debug: console.log(event.blockNumber, event.returnValues);
-      if (event.returnValues.addr.toLowerCase() != this.history.delegateAddress.toLowerCase()) continue;
+      allDelegates[event.returnValues.addr] = true;
+      if (event.returnValues.addr.toLowerCase() != history.delegateAddress.toLowerCase()) continue;
       for (let i = 0; i < event.returnValues.delegators.length; i++) {
-        this.history.delegationChangeEvents.push({
+        history.delegationChangeEvents.push({
           block: event.blockNumber,
           delegatorAddress: event.returnValues.delegators[i],
           newDelegatedStake: new BN(event.returnValues.delegatorTotalStakes[i]),
         });
       }
     }
+    return Object.keys(allDelegates);
   }
 
-  _parseRewardsAssignedEvents(events: EventData[]) {
+  // appends events to history, returns all delegates it encountered
+  static _parseRewardsAssignedEvents(events: EventData[], history: EventHistory) {
+    const allDelegates: { [delegateAddress: string]: boolean } = {};
     for (const event of events) {
       // for debug: console.log(event.blockNumber, event.returnValues);
-      if (event.returnValues.assignee.toLowerCase() != this.history.delegateAddress.toLowerCase()) continue;
-      this.history.assignmentEvents.push({
+      allDelegates[event.returnValues.assignee] = true;
+      if (event.returnValues.assignee.toLowerCase() != history.delegateAddress.toLowerCase()) continue;
+      history.assignmentEvents.push({
         block: event.blockNumber,
         amount: new BN(event.returnValues.amount),
       });
     }
+    return Object.keys(allDelegates);
   }
 
-  _parseRewardsDistributedEvents(events: EventData[]) {
+  // appends events to history, returns all delegates it encountered
+  static _parseRewardsDistributedEvents(events: EventData[], history: EventHistory) {
+    const allDelegates: { [delegateAddress: string]: boolean } = {};
     for (const event of events) {
       // for debug: console.log(event.blockNumber, event.returnValues);
-      if (event.returnValues.distributer.toLowerCase() != this.history.delegateAddress.toLowerCase()) continue;
+      allDelegates[event.returnValues.distributer] = true;
+      if (event.returnValues.distributer.toLowerCase() != history.delegateAddress.toLowerCase()) continue;
       const recipientAddresses = [];
       const amounts = [];
       for (let i = 0; i < event.returnValues.to.length; i++) {
         recipientAddresses.push(event.returnValues.to[i]);
         amounts.push(new BN(event.returnValues.amounts));
       }
-      this.history.distributionEvents.push({
+      history.distributionEvents.push({
         block: event.blockNumber,
         recipientAddresses: recipientAddresses,
         amounts: amounts,
@@ -188,6 +225,7 @@ export class HistoryDownloader {
         batchTxIndex: parseInt(event.returnValues.txIndex),
       });
     }
+    return Object.keys(allDelegates);
   }
 }
 

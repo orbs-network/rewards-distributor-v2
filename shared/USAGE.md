@@ -70,3 +70,16 @@ while (!done) {
   done = isComplete;
 }
 ```
+
+## Step 1 alternative: History downloader with data about all delegates
+
+```js
+// when creating, add 'true' at the last argument
+const historyDownloader = new HistoryDownloader(guardianAddress, genesisBlockNumber, true);
+
+// after downloading the history (step 2), present the historic data
+const historyPerDelegate = historyDownloader.extraHistoryPerDelegate;
+for (const [delegateAddress, delegateHistory] of Object.entries(historyPerDelegate)) {
+  console.log(delegateAddress, delegateHistory);
+}
+```

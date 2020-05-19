@@ -18,6 +18,8 @@ describe('e2e', () => {
   });
 
   it('starts a new rewards distribution with multiple transactions', async () => {
+    log('starts a new rewards distribution with multiple transactions');
+
     // get latest ethereum block
     const latestEthereumBlock = await driver.web3.eth.getBlockNumber();
     log(`latest ethereum block: ${latestEthereumBlock}`);
@@ -61,6 +63,29 @@ describe('e2e', () => {
     expect(events[0].returnValues).toHaveProperty('txIndex', '0');
     console.log(events[0].returnValues.to);
     console.log(events[0].returnValues.amounts);
+  });
+
+  it('downloads extra histories for all delegates for analytics purposes', async () => {
+    log('downloads extra histories for all delegates for analytics purposes');
+
+    // get latest ethereum block
+    const latestEthereumBlock = await driver.web3.eth.getBlockNumber();
+    log(`latest ethereum block: ${latestEthereumBlock}`);
+
+    // create a history downloader
+    const historyDownloader = new HistoryDownloader(driver.delegateAddress!, 0, true);
+    historyDownloader.setEthereumContracts(driver.web3, driver.ethereumContractAddresses!);
+
+    // download history up to this block
+    let maxProcessedBlock = 0;
+    while (maxProcessedBlock < latestEthereumBlock) {
+      maxProcessedBlock = await historyDownloader.processNextBatch(100, latestEthereumBlock);
+      log(`processed up to block: ${maxProcessedBlock}`);
+    }
+
+    for (const [delegateAddress, delegateHistory] of Object.entries(historyDownloader.extraHistoryPerDelegate)) {
+      console.log(delegateAddress, delegateHistory);
+    }
   });
 });
 
