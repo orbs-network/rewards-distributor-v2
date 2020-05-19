@@ -13,36 +13,36 @@ const getHistoryWithAssignments = () => {
   return h;
 };
 
-describe('divideBlockPeriod', () => {
+describe('calcDivisionForBlockPeriod', () => {
   beforeEach(() => {
     jest.restoreAllMocks();
   });
 
   it('fails if out of bounds', () => {
     expect(() => {
-      Calculator.divideBlockPeriod(30, 40, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
+      Calculator.calcDivisionForBlockPeriod(30, 40, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
     }).toThrow();
     expect(() => {
-      Calculator.divideBlockPeriod(1, 40, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
+      Calculator.calcDivisionForBlockPeriod(1, 40, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
     }).toThrow();
     expect(() => {
-      Calculator.divideBlockPeriod(8, 3, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
+      Calculator.calcDivisionForBlockPeriod(8, 3, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
     }).toThrow();
   });
 
-  it('does not call divideSingleAssignment when no assignments in range', () => {
-    jest.spyOn(Calculator, 'divideSingleAssignment');
-    Calculator.divideBlockPeriod(7, 8, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
-    expect(Calculator.divideSingleAssignment).toHaveBeenCalledTimes(0);
-    Calculator.divideBlockPeriod(10, 12, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
-    expect(Calculator.divideSingleAssignment).toHaveBeenCalledTimes(0);
+  it('does not call calcDivisionForSingleAssignment when no assignments in range', () => {
+    jest.spyOn(Calculator, 'calcDivisionForSingleAssignment');
+    Calculator.calcDivisionForBlockPeriod(7, 8, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenCalledTimes(0);
+    Calculator.calcDivisionForBlockPeriod(10, 12, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenCalledTimes(0);
   });
 
   it('calls divideSingleAssignment only for partial assignments in range', () => {
-    jest.spyOn(Calculator, 'divideSingleAssignment');
-    Calculator.divideBlockPeriod(4, 6, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
-    expect(Calculator.divideSingleAssignment).toHaveBeenCalledTimes(1);
-    expect(Calculator.divideSingleAssignment).toHaveBeenNthCalledWith(
+    jest.spyOn(Calculator, 'calcDivisionForSingleAssignment');
+    Calculator.calcDivisionForBlockPeriod(4, 6, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenCalledTimes(1);
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenNthCalledWith(
       1,
       1,
       expect.anything(),
@@ -52,11 +52,11 @@ describe('divideBlockPeriod', () => {
     );
   });
 
-  it('calls divideSingleAssignment with correct assignments indexes on exact boundaries', () => {
-    jest.spyOn(Calculator, 'divideSingleAssignment');
-    Calculator.divideBlockPeriod(3, 9, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
-    expect(Calculator.divideSingleAssignment).toHaveBeenCalledTimes(4);
-    expect(Calculator.divideSingleAssignment).toHaveBeenNthCalledWith(
+  it('calls calcDivisionForSingleAssignment with correct assignments indexes on exact boundaries', () => {
+    jest.spyOn(Calculator, 'calcDivisionForSingleAssignment');
+    Calculator.calcDivisionForBlockPeriod(3, 9, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenCalledTimes(4);
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenNthCalledWith(
       1,
       0,
       expect.anything(),
@@ -64,7 +64,7 @@ describe('divideBlockPeriod', () => {
       expect.anything(),
       expect.anything()
     );
-    expect(Calculator.divideSingleAssignment).toHaveBeenNthCalledWith(
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenNthCalledWith(
       2,
       1,
       expect.anything(),
@@ -72,7 +72,7 @@ describe('divideBlockPeriod', () => {
       expect.anything(),
       expect.anything()
     );
-    expect(Calculator.divideSingleAssignment).toHaveBeenNthCalledWith(
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenNthCalledWith(
       3,
       2,
       expect.anything(),
@@ -80,7 +80,7 @@ describe('divideBlockPeriod', () => {
       expect.anything(),
       expect.anything()
     );
-    expect(Calculator.divideSingleAssignment).toHaveBeenNthCalledWith(
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenNthCalledWith(
       4,
       3,
       expect.anything(),
@@ -90,11 +90,11 @@ describe('divideBlockPeriod', () => {
     );
   });
 
-  it('calls divideSingleAssignment with correct assignments indexes on loose boundaries', () => {
-    jest.spyOn(Calculator, 'divideSingleAssignment');
-    Calculator.divideBlockPeriod(2, 11, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
-    expect(Calculator.divideSingleAssignment).toHaveBeenCalledTimes(4);
-    expect(Calculator.divideSingleAssignment).toHaveBeenNthCalledWith(
+  it('calls calcDivisionForSingleAssignment with correct assignments indexes on loose boundaries', () => {
+    jest.spyOn(Calculator, 'calcDivisionForSingleAssignment');
+    Calculator.calcDivisionForBlockPeriod(2, 11, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenCalledTimes(4);
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenNthCalledWith(
       1,
       0,
       expect.anything(),
@@ -102,7 +102,7 @@ describe('divideBlockPeriod', () => {
       expect.anything(),
       expect.anything()
     );
-    expect(Calculator.divideSingleAssignment).toHaveBeenNthCalledWith(
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenNthCalledWith(
       2,
       1,
       expect.anything(),
@@ -110,7 +110,7 @@ describe('divideBlockPeriod', () => {
       expect.anything(),
       expect.anything()
     );
-    expect(Calculator.divideSingleAssignment).toHaveBeenNthCalledWith(
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenNthCalledWith(
       3,
       2,
       expect.anything(),
@@ -118,7 +118,7 @@ describe('divideBlockPeriod', () => {
       expect.anything(),
       expect.anything()
     );
-    expect(Calculator.divideSingleAssignment).toHaveBeenNthCalledWith(
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenNthCalledWith(
       4,
       3,
       expect.anything(),
@@ -128,8 +128,8 @@ describe('divideBlockPeriod', () => {
     );
   });
 
-  it('sums results from multiple divideSingleAssignments', () => {
-    const spy = jest.spyOn(Calculator, 'divideSingleAssignment');
+  it('sums results from multiple calcDivisionForSingleAssignment', () => {
+    const spy = jest.spyOn(Calculator, 'calcDivisionForSingleAssignment');
     spy.mockImplementationOnce(() => {
       return {
         amounts: { D1: new BN(10), D2: new BN(20) },
@@ -145,8 +145,8 @@ describe('divideBlockPeriod', () => {
         amounts: { D2: new BN(60), D3: new BN(100) },
       };
     });
-    const d = Calculator.divideBlockPeriod(6, 9, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
-    expect(Calculator.divideSingleAssignment).toHaveBeenCalledTimes(3);
+    const d = Calculator.calcDivisionForBlockPeriod(6, 9, { fractionForDelegators: 0.7 }, getHistoryWithAssignments());
+    expect(Calculator.calcDivisionForSingleAssignment).toHaveBeenCalledTimes(3);
     expect(Object.keys(d.amounts).length).toEqual(4);
     expect(d.amounts['D1']).toEqual(new BN(10));
     expect(d.amounts['D2']).toEqual(new BN(110));
@@ -155,19 +155,19 @@ describe('divideBlockPeriod', () => {
   });
 });
 
-describe('divideSingleAssignment', () => {
+describe('calcDivisionForSingleAssignment', () => {
   it('fails if out of bounds', () => {
     expect(() => {
       const h = getHistoryWithAssignments();
       const c = new CommitteeAccumulator(h);
       const d = new DelegationsAccumulator(h);
-      Calculator.divideSingleAssignment(-5, { fractionForDelegators: 0.7 }, c, d, h);
+      Calculator.calcDivisionForSingleAssignment(-5, { fractionForDelegators: 0.7 }, c, d, h);
     }).toThrow();
     expect(() => {
       const h = getHistoryWithAssignments();
       const c = new CommitteeAccumulator(h);
       const d = new DelegationsAccumulator(h);
-      Calculator.divideSingleAssignment(5, { fractionForDelegators: 0.7 }, c, d, h);
+      Calculator.calcDivisionForSingleAssignment(5, { fractionForDelegators: 0.7 }, c, d, h);
     }).toThrow();
   });
 
@@ -175,7 +175,7 @@ describe('divideSingleAssignment', () => {
     const h = getHistoryWithAssignments();
     const c = new CommitteeAccumulator(h);
     const d = new DelegationsAccumulator(h);
-    const division = Calculator.divideSingleAssignment(0, { fractionForDelegators: 0 }, c, d, h);
+    const division = Calculator.calcDivisionForSingleAssignment(0, { fractionForDelegators: 0 }, c, d, h);
     expect(division.amounts['G1']).toEqual(new BN(100));
   });
 
@@ -184,13 +184,13 @@ describe('divideSingleAssignment', () => {
       const h = getHistoryWithAssignments();
       const c = new CommitteeAccumulator(h);
       const d = new DelegationsAccumulator(h);
-      Calculator.divideSingleAssignment(0, { fractionForDelegators: -0.1 }, c, d, h);
+      Calculator.calcDivisionForSingleAssignment(0, { fractionForDelegators: -0.1 }, c, d, h);
     }).toThrow();
     expect(() => {
       const h = getHistoryWithAssignments();
       const c = new CommitteeAccumulator(h);
       const d = new DelegationsAccumulator(h);
-      Calculator.divideSingleAssignment(0, { fractionForDelegators: 1.1 }, c, d, h);
+      Calculator.calcDivisionForSingleAssignment(0, { fractionForDelegators: 1.1 }, c, d, h);
     }).toThrow();
   });
 
@@ -221,7 +221,7 @@ describe('divideSingleAssignment', () => {
     const h = getHistoryWithEverythingForSimpleAssignment();
     const c = new CommitteeAccumulator(h);
     const d = new DelegationsAccumulator(h);
-    const division = Calculator.divideSingleAssignment(0, { fractionForDelegators: 0.6 }, c, d, h);
+    const division = Calculator.calcDivisionForSingleAssignment(0, { fractionForDelegators: 0.6 }, c, d, h);
     // Total=10000 0.6*Total=6000 G1=4000
     // Blk01: W=0.5(25%) Amount=6000/4=1500 D1=1000(100%=1500)
     // Blk02: W=0.5(25%) Amount=6000/4=1500 D1=1000(50%=750) D2=1000(50%=750)
@@ -242,7 +242,7 @@ describe('divideSingleAssignment', () => {
     const h = getHistoryWithEverythingForSimpleAssignment();
     const c = new CommitteeAccumulator(h);
     const d = new DelegationsAccumulator(h);
-    const division = Calculator.divideSingleAssignment(1, { fractionForDelegators: 0.6 }, c, d, h);
+    const division = Calculator.calcDivisionForSingleAssignment(1, { fractionForDelegators: 0.6 }, c, d, h);
     // Total=20000 0.6*Total=12000 G1=8000
     // Blk06: W=0.25(12.5%) Amount=1500 D1=0(0%) D2=1000(33.3%=500) D3=2000(66.6%=1000)
     // Blk07: W=0.25(12.5%) Amount=1500 D1=3000(50%=750) D2=1000(16.6%=250) D3=2000(33.3%=500)
@@ -263,7 +263,7 @@ describe('divideSingleAssignment', () => {
     const h = getHistoryWithEverythingForSimpleAssignment();
     const c = new CommitteeAccumulator(h);
     const d = new DelegationsAccumulator(h);
-    const division = Calculator.divideSingleAssignment(2, { fractionForDelegators: 0.6 }, c, d, h);
+    const division = Calculator.calcDivisionForSingleAssignment(2, { fractionForDelegators: 0.6 }, c, d, h);
     // Total=30000 0.6*Total=18000 G1=12000
     // Blk11: W=0.5(100%) Amount=18000 D1=3000(37.5%=6750) D2=1000(12.5%=2250) D3=4000(50%=9000)
     // Sums: just one block
@@ -277,7 +277,7 @@ describe('divideSingleAssignment', () => {
     const h = getHistoryWithEverythingForSimpleAssignment();
     const c = new CommitteeAccumulator(h);
     const d = new DelegationsAccumulator(h);
-    const division = Calculator.divideSingleAssignment(3, { fractionForDelegators: 0.6 }, c, d, h);
+    const division = Calculator.calcDivisionForSingleAssignment(3, { fractionForDelegators: 0.6 }, c, d, h);
     // Total=40000 0.6*Total=24000 G1=16000
     // Blk11: W=0.5(100%) Amount=24000 D1=3000(37.5%=9000) D2=1000(12.5%=3000) D3=4000(50%=12000)
     // Sums: just one block

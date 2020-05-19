@@ -84,7 +84,7 @@ export class Distribution {
     public split: Split,
     private history: EventHistory
   ) {
-    this.division = Calculator.divideBlockPeriod(firstBlock, lastBlock, split, history);
+    this.division = Calculator.calcDivisionForBlockPeriod(firstBlock, lastBlock, split, history);
   }
 
   setEthereumContracts(web3: Web3, ethereumContractAddresses: EthereumContractAddresses) {

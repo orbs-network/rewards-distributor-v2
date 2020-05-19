@@ -18,6 +18,7 @@ const historyDownloader = new HistoryDownloader(guardianAddress, genesisBlockNum
 // enter the correct contracts addresses here
 historyDownloader.setEthereumContracts(web3, {
   Committee: '0x550f66F3248aa594376638277F0290D462C9Df9E',
+  Delegations: '0x6333c9549095651fCc8252345d6898208eBE8aaa',
   StakingRewards: '0x87ed2d308D30EE8c170627aCdc54d6d75CaB6bDc'
 });
 ```

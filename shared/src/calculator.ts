@@ -8,8 +8,13 @@ export interface Division {
 }
 
 export class Calculator {
-  // calls divideSingleAssignment to divide an entire perios of assignments
-  static divideBlockPeriod(firstBlock: number, lastBlock: number, split: Split, history: EventHistory): Division {
+  // calls calcDivisionForSingleAssignment on each assignment to divide an entire perios of assignments
+  static calcDivisionForBlockPeriod(
+    firstBlock: number,
+    lastBlock: number,
+    split: Split,
+    history: EventHistory
+  ): Division {
     if (firstBlock > history.lastProcessedBlock) {
       throw new Error(
         `Trying to access history at first block ${firstBlock} beyond last processed ${history.lastProcessedBlock}.`
@@ -32,7 +37,7 @@ export class Calculator {
       index < history.assignmentEvents.length &&
       history.assignmentEvents[index].block <= lastBlock
     ) {
-      const division = Calculator.divideSingleAssignment(
+      const division = Calculator.calcDivisionForSingleAssignment(
         index,
         split,
         committeeAccumulator,
@@ -52,7 +57,7 @@ export class Calculator {
     return res;
   }
 
-  static divideSingleAssignment(
+  static calcDivisionForSingleAssignment(
     assignmentEventIndex: number,
     split: Split,
     committeeAccumulator: CommitteeAccumulator,

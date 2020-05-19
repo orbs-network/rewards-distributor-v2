@@ -24,6 +24,7 @@ export class TestkitDriver {
     });
     this.ethereumContractAddresses = {
       Committee: this.orbsV2Driver.committeeGeneral.address,
+      Delegations: this.orbsV2Driver.delegations.address,
       StakingRewards: this.orbsV2Driver.stakingRewards.address,
     };
   }

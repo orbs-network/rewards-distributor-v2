@@ -51,6 +51,7 @@ export class HistoryDownloader {
   public history: EventHistory;
   private ethereumContracts?: {
     Committee: Contract;
+    Delegations: Contract;
     StakingRewards: Contract;
   };
 
@@ -62,6 +63,7 @@ export class HistoryDownloader {
     // TODO: replace this line with a nicer way to get the abi's
     this.ethereumContracts = {
       Committee: new web3.eth.Contract(compiledContracts.Committee.abi, ethereumContractAddresses.Committee),
+      Delegations: new web3.eth.Contract(compiledContracts.Delegations.abi, ethereumContractAddresses.Delegations),
       StakingRewards: new web3.eth.Contract(
         compiledContracts.StakingRewards.abi,
         ethereumContractAddresses.StakingRewards
@@ -86,13 +88,15 @@ export class HistoryDownloader {
 
     const requests = [];
     requests[0] = limit(() => this._web3ReadEvents('Committee', 'CommitteeChanged', fromBlock, toBlock));
-    requests[1] = limit(() => this._web3ReadEvents('StakingRewards', 'StakingRewardAssigned', fromBlock, toBlock));
-    requests[2] = limit(() => this._web3ReadEvents('StakingRewards', 'StakingRewardsDistributed', fromBlock, toBlock));
+    requests[1] = limit(() => this._web3ReadEvents('Delegations', 'DelegatedStakeChanged', fromBlock, toBlock));
+    requests[2] = limit(() => this._web3ReadEvents('StakingRewards', 'StakingRewardAssigned', fromBlock, toBlock));
+    requests[3] = limit(() => this._web3ReadEvents('StakingRewards', 'StakingRewardsDistributed', fromBlock, toBlock));
 
     const results = await Promise.all(requests);
     this._parseCommitteeChangedEvents(results[0]);
-    this._parseRewardsAssignedEvents(results[1]);
-    this._parseRewardsDistributedEvents(results[2]);
+    this._parseDelegationChangedEvents(results[1]);
+    this._parseRewardsAssignedEvents(results[2]);
+    this._parseRewardsDistributedEvents(results[3]);
 
     this.history.lastProcessedBlock = toBlock;
     return this.history.lastProcessedBlock;
@@ -100,7 +104,7 @@ export class HistoryDownloader {
 
   // TODO: add support for filters when ready (to optimize)
   async _web3ReadEvents(
-    contract: 'Committee' | 'StakingRewards',
+    contract: 'Committee' | 'Delegations' | 'StakingRewards',
     event: string,
     fromBlock: number,
     toBlock: number
@@ -136,6 +140,20 @@ export class HistoryDownloader {
         block: event.blockNumber,
         newRelativeWeightInCommittee: newRelativeWeightInCommittee,
       });
+    }
+  }
+
+  _parseDelegationChangedEvents(events: EventData[]) {
+    for (const event of events) {
+      // for debug: console.log(event.blockNumber, event.returnValues);
+      if (event.returnValues.addr.toLowerCase() != this.history.delegateAddress.toLowerCase()) continue;
+      for (let i = 0; i < event.returnValues.delegators.length; i++) {
+        this.history.delegationChangeEvents.push({
+          block: event.blockNumber,
+          delegatorAddress: event.returnValues.delegators[i],
+          newDelegatedStake: new BN(event.returnValues.delegatorTotalStakes[i]),
+        });
+      }
     }
   }
 
