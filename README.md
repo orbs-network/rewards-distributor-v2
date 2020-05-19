@@ -55,11 +55,11 @@ TypeScript shared code with all core logic for rewards calcs used by the other p
 
 ### Calculation algorithm overview
 
-See [ALGORITHM.md](shared/ALGORITHM.md).
+See [ALGORITHM.md](shared/ALGORITHM.md)
 
 ### Usage example of this library
 
-See [USAGE.md](shared/USAGE.md).
+See [USAGE.md](shared/USAGE.md)
 
 &nbsp;
 

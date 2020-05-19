@@ -71,7 +71,7 @@ while (!done) {
 }
 ```
 
-## Step 1 alternative: History downloader with data about all delegates
+## Step 1 Alternative: History downloader with data about all delegates
 
 ```js
 // when creating, add 'true' at the last argument
