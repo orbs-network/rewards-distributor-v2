@@ -2,6 +2,7 @@ import { Driver as OrbsV2Driver } from '@orbs-network/orbs-ethereum-contracts-v2
 import { Web3Driver } from '@orbs-network/orbs-ethereum-contracts-v2/release/eth';
 import { EthereumContractAddresses } from '../src';
 import Web3 from 'web3';
+import BN from 'bn.js';
 
 const SCENARIO_MAX_STANDBYS = 3;
 const SCENARIO_MAX_COMMITTEE_SIZE = 3;
@@ -52,7 +53,7 @@ export class TestkitDriver {
     await rg.assignAndApproveOrbs(poolAmount, d.stakingRewards.address);
     await d.stakingRewards.topUpPool(poolAmount, { from: rg.address });
 
-    // setup 3 validators
+    // setup 3 validators (max committee size is 3)
     const v1 = d.newParticipant();
     const v2 = d.newParticipant();
     const v3 = d.newParticipant();
@@ -66,6 +67,26 @@ export class TestkitDriver {
     await v2.notifyReadyForCommittee();
     await v3.notifyReadyForCommittee();
 
+    // setup 6 delegators
+    const d1 = d.newParticipant();
+    const d2 = d.newParticipant();
+    const d3 = d.newParticipant();
+    const d4 = d.newParticipant();
+    const d5 = d.newParticipant();
+    const d6 = d.newParticipant();
+    await d1.stake(100000);
+    await d2.stake(200000);
+    await d3.stake(300000);
+    await d4.stake(400000);
+    await d5.stake(500000);
+    await d6.stake(600000);
+    await d1.delegate(v1);
+    await d2.delegate(v1);
+    await d3.delegate(v2);
+    await d4.delegate(v2);
+    await d5.delegate(v3);
+    await d6.delegate(v3);
+
     // the delegate running the reward distribution code is v2
     this.delegateAddress = v2.address;
 
@@ -73,11 +94,20 @@ export class TestkitDriver {
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS * 4);
     await d.stakingRewards.assignRewards();
 
-    // setup 4th validator
+    // setup 4th validator (that will push v1 out of committee)
     const v4 = d.newParticipant();
     await v4.registerAsValidator();
     await v4.stake(4000000);
     await v4.notifyReadyForCommittee();
+
+    // setup 7th delegator
+    const d7 = d.newParticipant();
+    await d7.stake(700000);
+    await d7.delegate(v4);
+
+    // move some delegators to our delegate (v2)
+    await d1.delegate(v2);
+    await d5.delegate(v2);
 
     // assign rewards (TODO: this will become automatic)
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS * 4);
@@ -91,6 +121,11 @@ export class TestkitDriver {
     });
     if (!res) return [];
     return res;
+  }
+
+  async getCurrentRewardBalance(delegateAddress: string): Promise<BN> {
+    const res = await this.orbsV2Driver?.stakingRewards.getRewardBalance(delegateAddress);
+    return new BN(res!);
   }
 }
 

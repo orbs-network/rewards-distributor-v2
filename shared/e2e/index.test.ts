@@ -1,5 +1,6 @@
 import { TestkitDriver } from './driver';
 import { HistoryDownloader, Distribution } from '../src';
+import BN from 'bn.js';
 
 jest.setTimeout(60000);
 
@@ -17,8 +18,8 @@ describe('e2e', () => {
     await driver.closeConnections();
   });
 
-  it('starts a new rewards distribution with multiple transactions', async () => {
-    log('starts a new rewards distribution with multiple transactions');
+  it.only('starts a new rewards distribution with multiple transactions', async () => {
+    log('test started: starts a new..');
 
     // get latest ethereum block
     const latestEthereumBlock = await driver.web3.eth.getBlockNumber();
@@ -35,7 +36,18 @@ describe('e2e', () => {
       log(`processed up to block: ${maxProcessedBlock}`);
     }
 
+    // log history result
     console.log(historyDownloader.history);
+
+    // expectations over history result
+    expect(historyDownloader.history.delegateAddress).toEqual(driver.delegateAddress);
+    expect(historyDownloader.history.startingBlock).toEqual(0);
+    expect(historyDownloader.history.lastProcessedBlock).toEqual(latestEthereumBlock);
+    expect(historyDownloader.history.committeeChangeEvents.length).toBeGreaterThan(0);
+    expect(historyDownloader.history.delegationChangeEvents.length).toBeGreaterThan(0);
+    expect(historyDownloader.history.delegationChangeEvents[0].delegatorAddress).toEqual(driver.delegateAddress);
+    expect(historyDownloader.history.assignmentEvents.length).toBeGreaterThan(0);
+    expect(historyDownloader.history.distributionEvents.length).toEqual(0);
 
     // create a new distribution of rewards up to this block
     const distribution = Distribution.startNew(
@@ -45,6 +57,16 @@ describe('e2e', () => {
     );
     distribution.setEthereumContracts(driver.web3, driver.ethereumContractAddresses!);
 
+    // log division result
+    console.log(distribution.division);
+
+    // expectations over division result
+    const totalAmount = new BN(0);
+    for (const [, amount] of Object.entries(distribution.division.amounts)) totalAmount.iadd(amount);
+    const balance = await driver.getCurrentRewardBalance(driver.delegateAddress!);
+    expect(totalAmount).toEqual(balance);
+    expect(Object.keys(distribution.division.amounts).length).toEqual(5);
+
     // send distribution transactions
     let done = false;
     while (!done) {
@@ -53,7 +75,7 @@ describe('e2e', () => {
       log(`sent distribution transaction: ${receipt!.transactionHash}`);
     }
 
-    // verify the new distribution events
+    // expectations over new distribution events
     const events = await driver.getNewDistributionEvents(latestEthereumBlock + 1);
     expect(events.length).toEqual(1);
     expect(events[0].returnValues).toHaveProperty('distributer', driver.delegateAddress);
@@ -66,7 +88,7 @@ describe('e2e', () => {
   });
 
   it('downloads extra histories for all delegates for analytics purposes', async () => {
-    log('downloads extra histories for all delegates for analytics purposes');
+    log('test started: downloads extra..');
 
     // get latest ethereum block
     const latestEthereumBlock = await driver.web3.eth.getBlockNumber();
@@ -83,8 +105,22 @@ describe('e2e', () => {
       log(`processed up to block: ${maxProcessedBlock}`);
     }
 
+    // log history result
     for (const [delegateAddress, delegateHistory] of Object.entries(historyDownloader.extraHistoryPerDelegate)) {
-      console.log(delegateAddress, delegateHistory);
+      console.log('delegate', delegateAddress, delegateHistory);
+    }
+
+    // expectations over history result
+    expect(Object.keys(historyDownloader.extraHistoryPerDelegate).length).toEqual(4);
+    for (const [delegateAddress, delegateHistory] of Object.entries(historyDownloader.extraHistoryPerDelegate)) {
+      expect(delegateHistory.delegateAddress).toEqual(delegateAddress);
+      expect(delegateHistory.startingBlock).toEqual(0);
+      expect(delegateHistory.lastProcessedBlock).toEqual(latestEthereumBlock);
+      expect(delegateHistory.committeeChangeEvents.length).toBeGreaterThan(0);
+      expect(delegateHistory.delegationChangeEvents.length).toBeGreaterThan(0);
+      expect(delegateHistory.delegationChangeEvents[0].delegatorAddress).toEqual(delegateAddress);
+      expect(delegateHistory.assignmentEvents.length).toBeGreaterThan(0);
+      expect(delegateHistory.distributionEvents.length).toEqual(0);
     }
   });
 });
