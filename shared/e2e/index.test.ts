@@ -18,7 +18,7 @@ describe('e2e', () => {
     await driver.closeConnections();
   });
 
-  it.only('starts a new rewards distribution with multiple transactions', async () => {
+  it('starts a new rewards distribution with multiple transactions', async () => {
     log('test started: starts a new..');
 
     // get latest ethereum block
@@ -111,7 +111,7 @@ describe('e2e', () => {
     }
 
     // expectations over history result
-    expect(Object.keys(historyDownloader.extraHistoryPerDelegate).length).toEqual(4);
+    expect(Object.keys(historyDownloader.extraHistoryPerDelegate).length).toEqual(4 + 7);
     for (const [delegateAddress, delegateHistory] of Object.entries(historyDownloader.extraHistoryPerDelegate)) {
       expect(delegateHistory.delegateAddress).toEqual(delegateAddress);
       expect(delegateHistory.startingBlock).toEqual(0);
@@ -119,7 +119,6 @@ describe('e2e', () => {
       expect(delegateHistory.committeeChangeEvents.length).toBeGreaterThan(0);
       expect(delegateHistory.delegationChangeEvents.length).toBeGreaterThan(0);
       expect(delegateHistory.delegationChangeEvents[0].delegatorAddress).toEqual(delegateAddress);
-      expect(delegateHistory.assignmentEvents.length).toBeGreaterThan(0);
       expect(delegateHistory.distributionEvents.length).toEqual(0);
     }
   });
