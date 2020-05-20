@@ -229,6 +229,54 @@ export class HistoryDownloader {
     }
     return Object.keys(allDelegates);
   }
+
+  private autoscaleWindowSize = 0;
+  private autoscaleStreak = 0;
+  public autoscaleConsecutiveFailures = 0;
+
+  // experimental mode that chooses the maxBlocksInBatch for processNextBatch automatically
+  async processNextBatchAutoscale(
+    latestEthereumBlock: number,
+    {
+      concurrency = DEFAULT_CONCURRENCY,
+      startWindow = 10000,
+      maxWindow = 500000,
+      minWindow = 50,
+      windowGrowFactor = 2,
+      windowGrowAfter = 20,
+      windowShrinkFactor = 2,
+    }: {
+      concurrency?: number; // num of concurrent network requests
+      startWindow?: number; // the initial window size (max blocks in batch)
+      maxWindow?: number; // max possible window size (since it's autoscaling)
+      minWindow?: number; // min possible window size (since it's autoscaling)
+      windowGrowFactor?: number; // by how much should the window grow when attempting to grow
+      windowGrowAfter?: number; // after how many consecutive successes should we attempt to grow
+      windowShrinkFactor?: number; // by how much should the window shrink after a failure
+    } = {}
+  ): Promise<number> {
+    if (this.autoscaleWindowSize == 0) {
+      this.autoscaleWindowSize = startWindow;
+    }
+
+    try {
+      const res = await this.processNextBatch(this.autoscaleWindowSize, latestEthereumBlock, concurrency);
+      this.autoscaleStreak++;
+      this.autoscaleConsecutiveFailures = 0;
+      if (this.autoscaleStreak >= windowGrowAfter) {
+        this.autoscaleWindowSize = Math.round(this.autoscaleWindowSize * windowGrowFactor);
+        if (this.autoscaleWindowSize > maxWindow) this.autoscaleWindowSize = maxWindow;
+        this.autoscaleStreak = 0;
+      }
+      return res;
+    } catch (e) {
+      this.autoscaleConsecutiveFailures++;
+      this.autoscaleWindowSize = Math.round(this.autoscaleWindowSize / windowShrinkFactor);
+      if (this.autoscaleWindowSize < minWindow) this.autoscaleWindowSize = minWindow;
+      this.autoscaleStreak = 0;
+      throw e;
+    }
+  }
 }
 
 // efficient binary search, returns -1 if not found

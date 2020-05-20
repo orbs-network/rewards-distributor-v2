@@ -10,9 +10,10 @@ describe('resume distribution', () => {
   beforeAll(async () => {
     log('deploying Orbs PoS V2 contracts');
     await driver.deployOrbsV2Contracts();
+
     log('preparing the scenario');
     await driver.prepareScenario();
-    // create a distribution that will need to be resumed
+    // start a distribution that will need to be resumed during the test
     await driver.addManualDistributionEvent(
       0,
       await driver.web3.eth.getBlockNumber(),
@@ -29,7 +30,7 @@ describe('resume distribution', () => {
   });
 
   it('resumes an existing rewards distribution with multiple transactions', async () => {
-    log('test started: resumes an existing..');
+    log('test started: resume distribution');
 
     // get latest ethereum block
     const latestEthereumBlock = await driver.web3.eth.getBlockNumber();

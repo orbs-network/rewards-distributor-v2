@@ -95,3 +95,32 @@ for (const [delegateAddress, delegateHistory] of Object.entries(historyPerDelega
   console.log(delegateAddress, delegateHistory);
 }
 ```
+
+## Step 2 Alternative: Download the history with autoscaling window size
+
+```js
+// all options have defaults and are optional
+const autoscaleOptions = {
+  startWindow: 10000,
+  maxWindow: 500000,
+  minWindow: 50,
+  windowGrowFactor: 2,
+  windowGrowAfter: 20,
+  windowShrinkFactor: 2,
+};
+
+let maxProcessedBlock = 0;
+while (maxProcessedBlock < latestEthereumBlock) {
+  try {
+    maxProcessedBlock = await historyDownloader.processNextBatchAutoscale(latestEthereumBlock, autoscaleOptions);
+  } catch (e) {
+    if (historyDownloader.autoscaleConsecutiveFailures >= 2) {
+      console.log('failing too often, trying again in 5 seconds');
+      await sleep(5000);
+    }
+  }
+}
+
+// present the historic data
+console.log(historyDownloader.history);
+```

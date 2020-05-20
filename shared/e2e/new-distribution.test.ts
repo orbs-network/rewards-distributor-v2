@@ -10,6 +10,7 @@ describe('new distribution', () => {
   beforeAll(async () => {
     log('deploying Orbs PoS V2 contracts');
     await driver.deployOrbsV2Contracts();
+
     log('preparing the scenario');
     await driver.prepareScenario();
   });
@@ -19,7 +20,7 @@ describe('new distribution', () => {
   });
 
   it('starts a new rewards distribution with multiple transactions', async () => {
-    log('test started: starts a new..');
+    log('test started: new distribution');
 
     // get latest ethereum block
     const latestEthereumBlock = await driver.web3.eth.getBlockNumber();

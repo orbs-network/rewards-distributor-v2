@@ -9,6 +9,7 @@ describe('analytics', () => {
   beforeAll(async () => {
     log('deploying Orbs PoS V2 contracts');
     await driver.deployOrbsV2Contracts();
+
     log('preparing the scenario');
     await driver.prepareScenario();
   });
@@ -18,7 +19,7 @@ describe('analytics', () => {
   });
 
   it('downloads extra histories for all delegates for analytics purposes', async () => {
-    log('test started: downloads extra..');
+    log('test started: analytics');
 
     // get latest ethereum block
     const latestEthereumBlock = await driver.web3.eth.getBlockNumber();
