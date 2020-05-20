@@ -158,7 +158,7 @@ export class Distribution {
   }
 
   async sendTransactionBatch(
-    numRecipientsInTx?: number,
+    numRecipientsPerTx?: number,
     numConfirmations?: number,
     confirmationTimeoutSeconds?: number,
     progressCallback?: TxProgressNotification
@@ -166,8 +166,8 @@ export class Distribution {
     isComplete: boolean;
     txHashes: string[];
   }> {
-    if (!numRecipientsInTx) {
-      numRecipientsInTx = DEFAULT_NUM_RECIPIENTS_PER_TX;
+    if (!numRecipientsPerTx) {
+      numRecipientsPerTx = DEFAULT_NUM_RECIPIENTS_PER_TX;
     }
     if (!numConfirmations && numConfirmations !== 0) {
       numConfirmations = DEFAULT_NUM_CONFIRMATIONS;
@@ -187,8 +187,8 @@ export class Distribution {
 
     // prepare batch
     const batch = [];
-    const chunkedRecipientAddresses = _.chunk(allSortedRemainingRecipients, numRecipientsInTx);
-    const chunkedAmounts = _.chunk(allSortedRemainingAmounts, numRecipientsInTx);
+    const chunkedRecipientAddresses = _.chunk(allSortedRemainingRecipients, numRecipientsPerTx);
+    const chunkedAmounts = _.chunk(allSortedRemainingAmounts, numRecipientsPerTx);
     for (let i = 0; i < chunkedRecipientAddresses.length; i++) {
       const totalAmount = new BN(0);
       for (const amount of chunkedAmounts[i]) {

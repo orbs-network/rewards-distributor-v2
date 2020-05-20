@@ -1,7 +1,7 @@
 import BN from 'bn.js';
 import { bnDivideAsNumber, bnMultiplyByNumber } from './helpers';
 
-describe('divideAsNumber', () => {
+describe('bnDivideAsNumber', () => {
   it('works', () => {
     expect(bnDivideAsNumber(new BN(300), new BN(300))).toEqual(1);
     expect(bnDivideAsNumber(new BN(300), new BN(600))).toEqual(0.5);
@@ -11,7 +11,7 @@ describe('divideAsNumber', () => {
   });
 });
 
-describe('multiplyByNumber', () => {
+describe('bnMultiplyByNumber', () => {
   it('works', () => {
     expect(bnMultiplyByNumber(new BN(100), 1)).toEqual(new BN(100));
     expect(bnMultiplyByNumber(new BN(100), 0)).toEqual(new BN(0));

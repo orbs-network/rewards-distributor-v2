@@ -63,7 +63,7 @@ distribution.setEthereumContracts(web3, {
 ## Step 4: Send distribution transactions
 
 ```js
-const numRecipientsInTx = 10;
+const numRecipientsPerTx = 10;
 const numConfirmations = 4;
 const confirmationTimeoutSeconds = 600;
 const progressCallback = (progress: number, confirmations: number) => {
@@ -73,7 +73,7 @@ const progressCallback = (progress: number, confirmations: number) => {
 
 // all arguments are optional and have sensible defaults
 const { isComplete, txHashes } = await distribution.sendTransactionBatch(
-  numRecipientsInTx, 
+  numRecipientsPerTx, 
   numConfirmations,
   confirmationTimeoutSeconds,
   progressCallback
