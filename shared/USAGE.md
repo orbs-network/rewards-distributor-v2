@@ -85,6 +85,8 @@ console.log(txHashes);
 
 ## Step 1 Alternative: History downloader with data about all delegates
 
+This is useful for UI tools that show network-wide statistics and analytics. Normally, the history downloader only cares about the delegate doing the distribution. In this mode, it will download history for everybody.
+
 ```js
 // when creating, add 'true' at the last argument
 const historyDownloader = new HistoryDownloader(guardianAddress, genesisBlockNumber, true);
@@ -97,6 +99,8 @@ for (const [delegateAddress, delegateHistory] of Object.entries(historyPerDelega
 ```
 
 ## Step 2 Alternative: Download the history with autoscaling window size
+
+This experimental mode attempts to optimize history downloading by using a variable window size that autoscales and shrinks with errors (like too many events in window). Example also shows more robust error handling and retries.
 
 ```js
 // all options have defaults and are optional
