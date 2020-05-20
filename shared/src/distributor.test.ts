@@ -1,5 +1,5 @@
 import { EventHistory } from './history';
-import { Distribution, TooManyRecipientsError } from './distributor';
+import { Distribution } from './distributor';
 import BN from 'bn.js';
 
 const getEmptyBlockHistory = (size: number) => {
@@ -177,22 +177,29 @@ const getHistoryWithUnstartedDistribution = () => {
   return h;
 };
 
-describe('sendNextTransaction', () => {
+describe('sendTransactionBatch', () => {
   beforeEach(() => {
     jest.restoreAllMocks();
   });
 
-  it('sends to the first recipients if none received', async () => {
+  it('sends to all recipients if none received', async () => {
     const d = Distribution.startNew(20, { fractionForDelegators: 1 }, getHistoryWithUnstartedDistribution());
     if (d == null) fail();
-    jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
-      return Promise.resolve(getMockReceipt());
+    jest.spyOn(d, '_web3SendTransactionBatch').mockImplementation(async () => {
+      return Promise.resolve(['0x123']);
     });
-    expect(await d.sendNextTransaction(10)).toHaveProperty('isComplete', true);
-    expect(d._web3SendTransaction).toHaveBeenCalledWith(
-      ['D1', 'D2', 'D3', 'G1'],
-      [new BN(100), new BN(200), new BN(300), new BN(0)],
-      0,
+    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    expect(d._web3SendTransactionBatch).toHaveBeenCalledWith(
+      [
+        {
+          recipientAddresses: ['D1', 'D2', 'D3', 'G1'],
+          amounts: [new BN(100), new BN(200), new BN(300), new BN(0)],
+          totalAmount: new BN(600),
+          txIndex: 0,
+        },
+      ],
+      expect.anything(),
+      expect.anything(),
       undefined
     );
   });
@@ -200,14 +207,21 @@ describe('sendNextTransaction', () => {
   it('sends only to the remaining recipients if some already received', async () => {
     const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
-    jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
-      return Promise.resolve(getMockReceipt());
+    jest.spyOn(d, '_web3SendTransactionBatch').mockImplementation(async () => {
+      return Promise.resolve(['0x123']);
     });
-    expect(await d.sendNextTransaction(10)).toHaveProperty('isComplete', true);
-    expect(d._web3SendTransaction).toHaveBeenCalledWith(
-      ['D1', 'D3', 'G1'],
-      [new BN(100), new BN(300), new BN(0)],
-      1,
+    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    expect(d._web3SendTransactionBatch).toHaveBeenCalledWith(
+      [
+        {
+          recipientAddresses: ['D1', 'D3', 'G1'],
+          amounts: [new BN(100), new BN(300), new BN(0)],
+          totalAmount: new BN(400),
+          txIndex: 1,
+        },
+      ],
+      expect.anything(),
+      expect.anything(),
       undefined
     );
   });
@@ -215,86 +229,48 @@ describe('sendNextTransaction', () => {
   it('does not send if no remaining', async () => {
     const d = Distribution.getLast(20, getHistoryWithCompleteDistribution());
     if (d == null) fail();
-    jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
-      return Promise.resolve(getMockReceipt());
+    jest.spyOn(d, '_web3SendTransactionBatch').mockImplementation(async () => {
+      return Promise.resolve([]);
     });
-    expect(await d.sendNextTransaction(10)).toHaveProperty('isComplete', true);
-    expect(d._web3SendTransaction).not.toHaveBeenCalled();
+    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    expect(d._web3SendTransactionBatch).not.toHaveBeenCalled();
   });
 
   it('respects limited number of recipients per tx', async () => {
     const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
-    jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
-      return Promise.resolve(getMockReceipt());
+    jest.spyOn(d, '_web3SendTransactionBatch').mockImplementation(async () => {
+      return Promise.resolve(['0x123', '0x456']);
     });
-    expect(await d.sendNextTransaction(2)).toHaveProperty('isComplete', false);
-    expect(d._web3SendTransaction).toHaveBeenCalledWith(['D1', 'D3'], [new BN(100), new BN(300)], 1, undefined);
-  });
-
-  it('reduces number of recipients if process fails due to too many', async () => {
-    const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
-    if (d == null) fail();
-    jest.spyOn(d, '_web3SendTransaction').mockImplementationOnce(() => {
-      throw new TooManyRecipientsError();
-    });
-    jest.spyOn(d, '_web3SendTransaction').mockImplementation(async () => {
-      return Promise.resolve(getMockReceipt());
-    });
-    expect(await d.sendNextTransaction(10)).toHaveProperty('isComplete', false);
-    expect(d._web3SendTransaction).toBeCalledTimes(2);
-    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(
-      1,
-      ['D1', 'D3', 'G1'],
-      [new BN(100), new BN(300), new BN(0)],
-      1,
+    expect(await d.sendTransactionBatch(2)).toHaveProperty('isComplete', true);
+    expect(d._web3SendTransactionBatch).toHaveBeenCalledWith(
+      [
+        {
+          recipientAddresses: ['D1', 'D3'],
+          amounts: [new BN(100), new BN(300)],
+          totalAmount: new BN(400),
+          txIndex: 1,
+        },
+        {
+          recipientAddresses: ['G1'],
+          amounts: [new BN(0)],
+          totalAmount: new BN(0),
+          txIndex: 2,
+        },
+      ],
+      expect.anything(),
+      expect.anything(),
       undefined
     );
-    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(2, ['D1', 'D3'], [new BN(100), new BN(300)], 1, undefined);
-  });
-
-  it('keeps reducing number of recipients if process keeps failing and ultimately fails', async () => {
-    const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
-    if (d == null) fail();
-    jest.spyOn(d, '_web3SendTransaction').mockImplementation(() => {
-      throw new TooManyRecipientsError();
-    });
-    await expect(d.sendNextTransaction(10)).rejects.toBeInstanceOf(Error);
-    expect(d._web3SendTransaction).toBeCalledTimes(3);
-    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(
-      1,
-      ['D1', 'D3', 'G1'],
-      [new BN(100), new BN(300), new BN(0)],
-      1,
-      undefined
-    );
-    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(2, ['D1', 'D3'], [new BN(100), new BN(300)], 1, undefined);
-    expect(d._web3SendTransaction).toHaveBeenNthCalledWith(3, ['D1'], [new BN(100)], 1, undefined);
   });
 
   it('forwards errors', async () => {
     const d = Distribution.getLast(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
-    jest.spyOn(d, '_web3SendTransaction').mockImplementation(() => {
+    jest.spyOn(d, '_web3SendTransactionBatch').mockImplementation(() => {
       throw new Error('network connection error');
     });
-    await expect(d.sendNextTransaction(10)).rejects.toEqual(new Error('network connection error'));
-    expect(d._web3SendTransaction).toBeCalledTimes(1);
+    await expect(d.sendTransactionBatch(10)).rejects.toEqual(new Error('network connection error'));
+    expect(d._web3SendTransactionBatch).toBeCalledTimes(1);
   });
 });
-
-const getMockReceipt = () => {
-  return {
-    status: false,
-    transactionHash: '1111',
-    transactionIndex: 1,
-    blockHash: '2222',
-    blockNumber: 4,
-    from: '0xaaaa',
-    to: '0xbbbb',
-    cumulativeGasUsed: 100,
-    gasUsed: 100,
-    logs: [],
-    logsBloom: '0xcccc',
-  };
-};

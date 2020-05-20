@@ -21,3 +21,7 @@ export function bnMultiplyByNumber(a: BN, b: number): BN {
   const rr = aa.multipliedBy(bb).decimalPlaces(0, BigNumber.ROUND_HALF_CEIL);
   return new BN(rr.toString(10));
 }
+
+export async function sleep(millis: number) {
+  await new Promise((r) => setTimeout(r, millis));
+}

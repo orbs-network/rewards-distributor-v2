@@ -120,6 +120,8 @@ export class HistoryDownloader {
       HistoryDownloader._parseDelegationChangedEvents(results[1], delegateHistory);
       HistoryDownloader._parseRewardsAssignedEvents(results[2], delegateHistory);
       HistoryDownloader._parseRewardsDistributedEvents(results[3], delegateHistory);
+    }
+    for (const [, delegateHistory] of Object.entries(this.extraHistoryPerDelegate)) {
       delegateHistory.lastProcessedBlock = toBlock;
     }
   }

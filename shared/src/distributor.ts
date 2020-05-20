@@ -4,12 +4,14 @@ import { Division, Calculator } from './calculator';
 import BN from 'bn.js';
 import { EthereumContractAddresses } from '.';
 import { Contract } from 'web3-eth-contract';
-import { TransactionReceipt } from 'web3-core';
 import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/release/compiled-contracts';
 import Web3 from 'web3';
+import { sleep } from './helpers';
 
 const DEFAULT_NUM_RECIPIENTS_PER_TX = 10;
-const REDUCE_TOO_MANY_RECIPIENTS_BY = 0.8;
+const DEFAULT_NUM_CONFIRMATIONS = 4;
+const DEFAULT_CONFIRMATION_TIMEOUT_SECONDS = 60 * 10;
+const CONFIRMATION_POLL_INTERVAL_SECONDS = 5;
 const GAS_LIMIT_PER_TX = 0x7fffffff; // TODO: improve
 
 export class Distribution {
@@ -74,6 +76,7 @@ export class Distribution {
 
   public division: Division;
   private startScanningFromIndex = 0; // optimization, the index we can start scanning from to find history events
+  private web3?: Web3;
   private ethereumContracts?: {
     StakingRewards: Contract;
   };
@@ -88,6 +91,7 @@ export class Distribution {
   }
 
   setEthereumContracts(web3: Web3, ethereumContractAddresses: EthereumContractAddresses) {
+    this.web3 = web3;
     // TODO: replace this line with a nicer way to get the abi's
     this.ethereumContracts = {
       StakingRewards: new web3.eth.Contract(
@@ -153,91 +157,160 @@ export class Distribution {
     return Object.keys(remaining).length == 0;
   }
 
-  async sendNextTransaction(
+  async sendTransactionBatch(
     numRecipientsInTx?: number,
+    numConfirmations?: number,
+    confirmationTimeoutSeconds?: number,
     progressCallback?: TxProgressNotification
   ): Promise<{
     isComplete: boolean;
-    receipt?: TransactionReceipt;
+    txHashes: string[];
   }> {
     if (!numRecipientsInTx) {
       numRecipientsInTx = DEFAULT_NUM_RECIPIENTS_PER_TX;
+    }
+    if (!numConfirmations && numConfirmations !== 0) {
+      numConfirmations = DEFAULT_NUM_CONFIRMATIONS;
+    }
+    if (!confirmationTimeoutSeconds) {
+      confirmationTimeoutSeconds = DEFAULT_CONFIRMATION_TIMEOUT_SECONDS;
     }
 
     const [remaining, maxTxIndex] = this._findRemainingRecipients();
     const allSortedRemainingRecipients = _.sortBy(Object.keys(remaining));
     const allSortedRemainingAmounts = _.map(allSortedRemainingRecipients, (r) => remaining[r]);
-    const txIndex = maxTxIndex + 1;
+    const nextTxIndex = maxTxIndex + 1;
 
-    if (allSortedRemainingRecipients.length == 0) return { isComplete: true };
-    if (numRecipientsInTx > allSortedRemainingRecipients.length) {
-      numRecipientsInTx = allSortedRemainingRecipients.length;
+    if (allSortedRemainingRecipients.length == 0) {
+      return { isComplete: true, txHashes: [] };
     }
 
-    while (numRecipientsInTx > 0) {
-      const recipientAddresses = _.take(allSortedRemainingRecipients, numRecipientsInTx);
-      const amounts = _.take(allSortedRemainingAmounts, numRecipientsInTx);
-      try {
-        const receipt = await this._web3SendTransaction(recipientAddresses, amounts, txIndex, progressCallback);
-        const isComplete = recipientAddresses.length == allSortedRemainingRecipients.length;
-        return { isComplete, receipt };
-      } catch (e) {
-        if (e instanceof TooManyRecipientsError) {
-          numRecipientsInTx = Math.floor(numRecipientsInTx * REDUCE_TOO_MANY_RECIPIENTS_BY);
-        } else {
-          throw e;
-        }
+    // prepare batch
+    const batch = [];
+    const chunkedRecipientAddresses = _.chunk(allSortedRemainingRecipients, numRecipientsInTx);
+    const chunkedAmounts = _.chunk(allSortedRemainingAmounts, numRecipientsInTx);
+    for (let i = 0; i < chunkedRecipientAddresses.length; i++) {
+      const totalAmount = new BN(0);
+      for (const amount of chunkedAmounts[i]) {
+        totalAmount.iadd(amount);
       }
+      batch.push({
+        recipientAddresses: chunkedRecipientAddresses[i],
+        amounts: chunkedAmounts[i],
+        totalAmount: totalAmount,
+        txIndex: nextTxIndex + i,
+      });
     }
 
-    throw new Error(`Cannot send next transaction even after reducing num recipients to zero.`);
+    // send the batch with web3
+    const txHashes = await this._web3SendTransactionBatch(
+      batch,
+      numConfirmations,
+      confirmationTimeoutSeconds,
+      progressCallback
+    );
+    const isComplete = numConfirmations > 0 && txHashes.length == batch.length;
+    return { isComplete, txHashes };
   }
 
-  // progress is a for a single transaction and checks confirmations
-  async _web3SendTransaction(
-    recipientAddresses: string[],
-    amounts: BN[],
-    txIndex: number,
+  // returns txHashes, but only after numConfirmations is reached
+  async _web3SendTransactionBatch(
+    batch: {
+      recipientAddresses: string[];
+      amounts: BN[];
+      totalAmount: BN;
+      txIndex: number;
+    }[],
+    numConfirmations: number,
+    confirmationTimeoutSeconds: number,
     progressCallback?: TxProgressNotification
-  ): Promise<TransactionReceipt> {
-    if (!this.ethereumContracts) {
+  ): Promise<string[]> {
+    if (!this.web3 || !this.ethereumContracts) {
       throw new Error(`Ethereum contracts are undefined, did you call setEthereumContracts?`);
     }
 
-    const totalAmount = new BN(0);
-    for (const amount of amounts) {
-      totalAmount.iadd(amount);
+    // send all transactions
+    const request = new this.web3.BatchRequest();
+    const promises: Promise<string>[] = _.map(batch, (txData) => {
+      return new Promise((resolve, reject) => {
+        if (!this.ethereumContracts) {
+          return reject(new Error(`Ethereum contracts are undefined, did you call setEthereumContracts?`));
+        }
+        const tx = this.ethereumContracts.StakingRewards.methods
+          .distributeOrbsTokenRewards(
+            txData.totalAmount.toString(), // uint256 totalAmount
+            this.firstBlock, // uint256 fromBlock
+            this.lastBlock, // uint256 toBlock
+            Math.round(this.split.fractionForDelegators * 100 * 1000), // uint split
+            txData.txIndex, // uint txIndex
+            txData.recipientAddresses, // address[] calldata to
+            _.map(txData.amounts, (bn) => bn.toString()) // uint256[] calldata amounts
+          )
+          .send.request(
+            {
+              from: this.history.delegateAddress,
+              gas: GAS_LIMIT_PER_TX,
+            },
+            (error: Error, txHash: string) => {
+              if (error) reject(error);
+              else resolve(txHash);
+            }
+          );
+        request.add(tx);
+      });
+    });
+    request.execute();
+    const txHashes = await Promise.all(promises);
+    if (numConfirmations == 0) return txHashes;
+
+    // check for confirmations
+    const lastTxHash = txHashes[txHashes.length - 1];
+    const confirmed = await this._web3WaitForConfirmation(
+      lastTxHash,
+      numConfirmations,
+      confirmationTimeoutSeconds,
+      progressCallback
+    );
+
+    if (confirmed) return txHashes;
+    throw new Error(`Did not receive ${numConfirmations} confirmations before timeout ${confirmationTimeoutSeconds}.`);
+  }
+
+  // returns true if confirmations arrived before timeout, false otherwise
+  async _web3WaitForConfirmation(
+    txHash: string,
+    numConfirmations: number,
+    confirmationTimeoutSeconds: number,
+    progressCallback?: TxProgressNotification
+  ): Promise<boolean> {
+    if (!this.web3) {
+      throw new Error(`Ethereum contracts are undefined, did you call setEthereumContracts?`);
     }
 
-    try {
-      const receipt = await this.ethereumContracts.StakingRewards.methods
-        .distributeOrbsTokenRewards(
-          totalAmount.toString(), // uint256 totalAmount
-          this.firstBlock, // uint256 fromBlock
-          this.lastBlock, // uint256 toBlock
-          Math.round(this.split.fractionForDelegators * 100 * 1000), // uint split
-          txIndex, // uint txIndex
-          recipientAddresses, // address[] calldata to
-          _.map(amounts, (bn) => bn.toString()) // uint256[] calldata amounts
-        )
-        .send({
-          from: this.history.delegateAddress,
-          gas: GAS_LIMIT_PER_TX,
-        });
-      return receipt;
-    } catch (e) {
-      // TODO: catch out of gas and throw TooManyRecipientsError
-      console.log(e);
-      throw e;
+    let receipt = null;
+    const startTime = new Date().getTime();
+    while (new Date().getTime() - startTime < confirmationTimeoutSeconds * 1000) {
+      await sleep(CONFIRMATION_POLL_INTERVAL_SECONDS * 1000);
+      if (receipt == null) {
+        try {
+          receipt = await this.web3.eth.getTransactionReceipt(txHash);
+        } catch (e) {
+          console.error(receipt);
+        }
+      }
+      if (receipt != null) {
+        const ethereumBlockNum = await this.web3.eth.getBlockNumber();
+        const confirmations = ethereumBlockNum - receipt.blockNumber + 1;
+        if (progressCallback) {
+          progressCallback(Math.min(confirmations / numConfirmations, 1), confirmations);
+        }
+        if (confirmations >= numConfirmations) {
+          return true;
+        }
+      }
     }
+    return false;
   }
 }
 
-export type TxProgressNotification = (progress: number, status: string) => void;
-
-export class TooManyRecipientsError extends Error {
-  constructor(message?: string) {
-    super(message);
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-}
+export type TxProgressNotification = (progress: number, confirmations: number) => void;

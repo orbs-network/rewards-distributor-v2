@@ -63,12 +63,24 @@ distribution.setEthereumContracts(web3, {
 ## Step 4: Send distribution transactions
 
 ```js
-let done = false;
-while (!done) {
-  const { isComplete, receipt } = await distribution.sendNextTransaction();
-  console.log(receipt);
-  done = isComplete;
-}
+const numRecipientsInTx = 10;
+const numConfirmations = 4;
+const confirmationTimeoutSeconds = 600;
+const progressCallback = (progress: number, confirmations: number) => {
+  // present progress to users as transactions are confirmed
+  console.log(`progress: ${progress * 100}% - ${confirmations} confirmations received`);
+};
+
+// all arguments are optional and have sensible defaults
+const { isComplete, txHashes } = await distribution.sendTransactionBatch(
+  numRecipientsInTx, 
+  numConfirmations,
+  confirmationTimeoutSeconds,
+  progressCallback
+);
+
+// present the transaction hashes
+console.log(txHashes);
 ```
 
 ## Step 1 Alternative: History downloader with data about all delegates

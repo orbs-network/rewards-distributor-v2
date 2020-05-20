@@ -68,23 +68,27 @@ describe('e2e', () => {
     expect(Object.keys(distribution.division.amounts).length).toEqual(5);
 
     // send distribution transactions
-    let done = false;
-    while (!done) {
-      const { isComplete, receipt } = await distribution.sendNextTransaction(3);
-      done = isComplete;
-      log(`sent distribution transaction: ${receipt!.transactionHash}`);
-    }
+    const { isComplete, txHashes } = await distribution.sendTransactionBatch(3, 1);
+    console.log(txHashes);
+    expect(isComplete).toEqual(true);
 
     // expectations over new distribution events
     const events = await driver.getNewDistributionEvents(latestEthereumBlock + 1);
-    expect(events.length).toEqual(1);
+    expect(events.length).toEqual(2);
     expect(events[0].returnValues).toHaveProperty('distributer', driver.delegateAddress);
     expect(events[0].returnValues).toHaveProperty('fromBlock', '0');
     expect(events[0].returnValues).toHaveProperty('toBlock', latestEthereumBlock.toString());
     expect(events[0].returnValues).toHaveProperty('split', '70000');
     expect(events[0].returnValues).toHaveProperty('txIndex', '0');
-    console.log(events[0].returnValues.to);
-    console.log(events[0].returnValues.amounts);
+    expect(events[1].returnValues).toHaveProperty('distributer', driver.delegateAddress);
+    expect(events[1].returnValues).toHaveProperty('fromBlock', '0');
+    expect(events[1].returnValues).toHaveProperty('toBlock', latestEthereumBlock.toString());
+    expect(events[1].returnValues).toHaveProperty('split', '70000');
+    expect(events[1].returnValues).toHaveProperty('txIndex', '1');
+    expect(events[0].returnValues.amounts.concat(events[1].returnValues.amounts)).toEqual(
+      // does not contain the validator itself since amounts jitter slightly
+      expect.arrayContaining(['14712', '11394', '2325', '698'])
+    );
   });
 
   it('downloads extra histories for all delegates for analytics purposes', async () => {
@@ -119,7 +123,6 @@ describe('e2e', () => {
       expect(delegateHistory.committeeChangeEvents.length).toBeGreaterThan(0);
       expect(delegateHistory.delegationChangeEvents.length).toBeGreaterThan(0);
       expect(delegateHistory.delegationChangeEvents[0].delegatorAddress).toEqual(delegateAddress);
-      expect(delegateHistory.distributionEvents.length).toEqual(0);
     }
   });
 });
