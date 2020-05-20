@@ -295,7 +295,7 @@ export class Distribution {
         try {
           receipt = await this.web3.eth.getTransactionReceipt(txHash);
         } catch (e) {
-          console.error(receipt);
+          // do nothing
         }
       }
       if (receipt != null) {

@@ -123,6 +123,27 @@ export class TestkitDriver {
     return res;
   }
 
+  async addManualDistributionEvent(
+    fromBlock: number,
+    toBlock: number,
+    split: number,
+    txIndex: number,
+    from: string,
+    to: string,
+    amount: BN
+  ) {
+    await this.orbsV2Driver?.stakingRewards.distributeOrbsTokenRewards(
+      amount,
+      fromBlock,
+      toBlock,
+      split,
+      txIndex,
+      [to],
+      [amount],
+      { from: from }
+    );
+  }
+
   async getCurrentRewardBalance(delegateAddress: string): Promise<BN> {
     const res = await this.orbsV2Driver?.stakingRewards.getRewardBalance(delegateAddress);
     return new BN(res!);
@@ -136,6 +157,10 @@ export const evmIncreaseTime = async (web3: Web3Driver, seconds: number) =>
       err ? reject(err) : resolve(res)
     )
   );
+
+export function log(msg: string) {
+  console.log(`${new Date().toISOString()} ${msg}`);
+}
 
 // needed due to missing types
 interface HDWalletProvider {

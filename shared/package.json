@@ -11,7 +11,7 @@
     "build": "tsc",
     "pretest": "npm run typecheck && npm run lint",
     "test": "jest",
-    "test:e2e": "jest --config ./e2e/jest.json --forceExit",
+    "test:e2e": "jest --config ./e2e/jest.json --forceExit --runInBand",
     "prettify": "npx prettier \"src/**/*.ts\" --write && npx prettier \"e2e/**/*.ts\" --write",
     "start-ganache": "mkdir -p _out && ganache-cli -p 7545 -i 5777 -a 1000 --gasLimit 0x7FFFFFFF --gasPrice 1 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\" > _out/ganache.log & echo $! > _out/local-ganache.pid",
     "stop-ganache": "pkill -P `cat _out/local-ganache.pid`"
