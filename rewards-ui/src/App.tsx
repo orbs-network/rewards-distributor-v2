@@ -2,9 +2,13 @@ import React from 'react';
 import logo from './logo.svg';
 import './App.css';
 import { sum } from 'rewards-v2/dist/src/sum';
-import {} from '@ma'
+import {Container, Drawer, Toolbar} from '@material-ui/core'
+import {TopBar} from "./componentes/structure/TopBar";
+import { useBoolean } from 'react-hanger';
 
 function App() {
+    const drawerOpen = useBoolean(false);
+
   return (
     // <div className="App">
     //   <header className="App-header">
@@ -22,9 +26,15 @@ function App() {
     //     </a>
     //   </header>
     // </div>
-    <Container>
-
-    </Container>
+      <>
+          <TopBar onMenuClick={drawerOpen.toggle}/>
+          App
+          <Drawer anchor={'left'} open={drawerOpen.value} onClose={drawerOpen.setFalse}>
+              {/* Dev Note : We add an empty 'Toolbar' so the drawer will start beneath the top bar*/}
+              <Toolbar />
+              Drawer
+          </Drawer>
+      </>
   );
 }
 
