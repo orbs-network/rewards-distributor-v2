@@ -1,13 +1,25 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import logo from './logo.svg';
 import './App.css';
 import { sum } from 'rewards-v2/dist/src/sum';
-import {Container, Drawer, Toolbar} from '@material-ui/core'
+import {Container, Divider, Drawer, List, ListItem, ListItemIcon, ListItemText, Toolbar} from '@material-ui/core'
 import {TopBar} from "./componentes/structure/TopBar";
 import { useBoolean } from 'react-hanger';
+import MailIcon from '@material-ui/icons/Mail';
+import InboxIcon from '@material-ui/icons/MoveToInbox';
+import Web3 from 'web3';
+import {useRecoilState} from "recoil";
+import {drawerOpenState} from "./state/StructureState";
 
 function App() {
-    const drawerOpen = useBoolean(false);
+    // const drawerOpen = useBoolean(false);
+    const [drawerOpen, setDrawerOpen] = useRecoilState(drawerOpenState);
+
+    // @ts-ignore
+    const ethereum = window.ethereum;
+    const web3Instance = useMemo(() => {
+        return new Web3(ethereum);
+    }, [ethereum])
 
   return (
     // <div className="App">
@@ -27,12 +39,22 @@ function App() {
     //   </header>
     // </div>
       <>
-          <TopBar onMenuClick={drawerOpen.toggle}/>
+          <TopBar onMenuClick={() => setDrawerOpen(!drawerOpen)}/>
           App
-          <Drawer anchor={'left'} open={drawerOpen.value} onClose={drawerOpen.setFalse}>
+          <Drawer anchor={'left'} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
               {/* Dev Note : We add an empty 'Toolbar' so the drawer will start beneath the top bar*/}
               <Toolbar />
-              Drawer
+              <List>
+                  <ListItem>
+                      <ListItemIcon><MailIcon/></ListItemIcon>
+                      <ListItemText primary={'First Link'} />
+                  </ListItem>
+                  <Divider/>
+                  <ListItem>
+                      <ListItemIcon><InboxIcon/></ListItemIcon>
+                      <ListItemText primary={'Other Link'} />
+                  </ListItem>
+              </List>
           </Drawer>
       </>
   );

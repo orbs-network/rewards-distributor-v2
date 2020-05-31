@@ -9,8 +9,6 @@ interface IProps {
 
 
 const useStyles = makeStyles((theme) => {
-    console.log({theme})
-    console.log(theme.zIndex.drawer)
     return createStyles({
         appBar: {
             // DEV_NOTE : Example says to use the zIndex of 'drawer' but on testing it works only when giving higher

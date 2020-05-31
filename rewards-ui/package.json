@@ -16,8 +16,10 @@
     "react-dom": "^16.13.1",
     "react-hanger": "^2.2.1",
     "react-scripts": "3.4.1",
+    "recoil": "0.0.8",
     "rewards-v2": "file:../shared",
-    "typescript": "^3.7.5"
+    "typescript": "^3.7.5",
+    "web3": "^1.2.8"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -40,5 +42,7 @@
       "last 1 safari version"
     ]
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/recoil": "0.0.0"
+  }
 }
