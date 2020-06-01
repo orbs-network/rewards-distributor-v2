@@ -1,7 +1,9 @@
 import {IServices} from "./Services";
 import {useContext} from "react";
 import {ServicesContext} from "../state/ServicesState";
-import {HistoryService} from "./HistoryService";
+import {HistoryService} from "./historyService/HistoryService";
+import {IHistoryService} from "./historyService/IHistoryService";
+import {ICryptoWalletConnectionService} from "./cryptoWalletConnectionService/ICryptoWalletConnectionService";
 
 export function useServices(): IServices {
     const services = useContext(ServicesContext);
@@ -13,6 +15,10 @@ export function useServices(): IServices {
     return services;
 }
 
-export function useHistoryService(): HistoryService {
+export function useHistoryService(): IHistoryService {
     return useServices().historyService;
+}
+
+export function useCryptoWalletConnectionService(): ICryptoWalletConnectionService {
+    return useServices().cryptoWalletIntegrationService;
 }
