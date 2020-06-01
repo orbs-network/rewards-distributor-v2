@@ -1,17 +1,29 @@
 import React from 'react'
 import App from "./App";
-import { RecoilRoot } from 'recoil';
+import {RecoilRoot} from 'recoil';
+import {ServicesContext} from "./state/ServicesState";
+import {buildServices} from "./services/Services";
+import Web3 from "web3";
 
 interface IProps {
 
 }
 
-export const AppWrapper = React.memo<IProps>((props) => {
-  const {} = props;
+// @ts-ignore
+const ethereum = window.ethereum;
+const web3 = new Web3(ethereum);
 
-  return (
-      <RecoilRoot>
-      <App/>
-      </RecoilRoot>
-  )
+const services = buildServices(web3)
+
+export const AppWrapper = React.memo<IProps>((props) => {
+    const {} = props;
+
+    return (
+        <ServicesContext.Provider value={services}>
+            <RecoilRoot>
+                <App/>
+            </RecoilRoot>
+        </ServicesContext.Provider>
+
+    )
 });
