@@ -4,7 +4,7 @@ import { Division, Calculator } from './calculator';
 import BN from 'bn.js';
 import { EthereumContractAddresses } from '.';
 import { Contract } from 'web3-eth-contract';
-import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/release/compiled-contracts';
+import StakingRewardsJson from '@orbs-network/orbs-ethereum-contracts-v2/release/build/contracts/StakingRewards.json';
 import Web3 from 'web3';
 import { sleep } from './helpers';
 
@@ -95,7 +95,7 @@ export class Distribution {
     // TODO: replace this line with a nicer way to get the abi's
     this.ethereumContracts = {
       StakingRewards: new web3.eth.Contract(
-        compiledContracts.StakingRewards.abi,
+          StakingRewardsJson.abi as any,
         ethereumContractAddresses.StakingRewards
       ),
     };

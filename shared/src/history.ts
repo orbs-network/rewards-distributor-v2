@@ -3,7 +3,9 @@ import BN from 'bn.js';
 import { EventData, Contract } from 'web3-eth-contract';
 import pLimit from 'p-limit';
 import Web3 from 'web3';
-import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/release/compiled-contracts';
+import CommitteeJson from '@orbs-network/orbs-ethereum-contracts-v2/release/build/contracts/Committee.json';
+import DelegationsJson from '@orbs-network/orbs-ethereum-contracts-v2/release/build/contracts/Delegations.json';
+import StakingRewardsJson from '@orbs-network/orbs-ethereum-contracts-v2/release/build/contracts/StakingRewards.json';
 import { bnZero, bnDivideAsNumber } from './helpers';
 import { EthereumContractAddresses } from '.';
 
@@ -64,10 +66,10 @@ export class HistoryDownloader {
   setEthereumContracts(web3: Web3, ethereumContractAddresses: EthereumContractAddresses) {
     // TODO: replace this line with a nicer way to get the abi's
     this.ethereumContracts = {
-      Committee: new web3.eth.Contract(compiledContracts.Committee.abi, ethereumContractAddresses.Committee),
-      Delegations: new web3.eth.Contract(compiledContracts.Delegations.abi, ethereumContractAddresses.Delegations),
+      Committee: new web3.eth.Contract(CommitteeJson.abi as any, ethereumContractAddresses.Committee),
+      Delegations: new web3.eth.Contract(DelegationsJson.abi as any, ethereumContractAddresses.Delegations),
       StakingRewards: new web3.eth.Contract(
-        compiledContracts.StakingRewards.abi,
+          StakingRewardsJson.abi as any,
         ethereumContractAddresses.StakingRewards
       ),
     };

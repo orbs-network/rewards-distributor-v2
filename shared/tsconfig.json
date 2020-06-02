@@ -9,6 +9,7 @@
       "dom.iterable",
       "esnext"
     ],
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

@@ -3,6 +3,7 @@ import { Web3Driver } from '@orbs-network/orbs-ethereum-contracts-v2/release/eth
 import { EthereumContractAddresses } from '../src';
 import Web3 from 'web3';
 import BN from 'bn.js';
+import {EventData} from "web3-eth-contract";
 
 const SCENARIO_MAX_STANDBYS = 3;
 const SCENARIO_MAX_COMMITTEE_SIZE = 3;
@@ -114,7 +115,7 @@ export class TestkitDriver {
     await d.stakingRewards.assignRewards();
   }
 
-  async getNewDistributionEvents(fromBlock: number) {
+  async getNewDistributionEvents(fromBlock: number): Promise<EventData[]>{
     const res = await this.orbsV2Driver?.stakingRewards.web3Contract.getPastEvents('StakingRewardsDistributed', {
       fromBlock: fromBlock,
       toBlock: 'latest',
