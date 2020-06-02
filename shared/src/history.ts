@@ -84,8 +84,10 @@ export class HistoryDownloader {
 
     // TODO: we now support multiple concurrent requests, also look into request batching https://web3js.readthedocs.io/en/v1.2.6/web3.html#batchrequest
     const limit = pLimit(concurrency);
-    const fromBlock = this.history.lastProcessedBlock + 1;
-    const toBlock = Math.min(this.history.lastProcessedBlock + maxBlocksInBatch, latestEthereumBlock);
+    // Handles both 'first call' (uses the "starting block") and subsequent calls (uses "last processed block)
+    const fromBlock = Math.max(this.history.lastProcessedBlock + 1, this.history.startingBlock);
+    const toBlock = Math.min(fromBlock + maxBlocksInBatch, latestEthereumBlock);
+
     if (toBlock < fromBlock) {
       throw new Error(`Not enough new blocks in network to process another batch.`);
     }
