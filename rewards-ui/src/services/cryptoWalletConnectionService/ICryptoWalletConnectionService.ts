@@ -7,6 +7,7 @@ export interface ICryptoWalletConnectionService {
   // Getters
   didUserApproveDappInThePast: boolean;
   readMainAddress: () => Promise<string>;
+  readCurrentBlockNumber: () => Promise<number>;
   getIsMainNetwork: () => Promise<boolean>;
 
   requestConnectionPermission: () => Promise<boolean>;

@@ -1,7 +1,6 @@
 import {IServices} from "./Services";
 import {useContext} from "react";
 import {ServicesContext} from "../state/ServicesState";
-import {HistoryService} from "./historyService/HistoryService";
 import {IHistoryService} from "./historyService/IHistoryService";
 import {ICryptoWalletConnectionService} from "./cryptoWalletConnectionService/ICryptoWalletConnectionService";
 

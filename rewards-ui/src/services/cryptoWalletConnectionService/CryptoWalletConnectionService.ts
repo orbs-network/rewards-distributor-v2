@@ -54,6 +54,10 @@ export class CryptoWalletConnectionService implements ICryptoWalletConnectionSer
     return accounts[0];
   }
 
+  async readCurrentBlockNumber() : Promise<number> {
+    return this.web3?.eth.getBlockNumber() || 0;
+  }
+
   // Event listeners
   onMainAddressChange(onChange: (mainAddress: string) => void): () => void {
     if (!this.hasEventsSupport) {

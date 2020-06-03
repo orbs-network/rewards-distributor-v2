@@ -19,6 +19,7 @@
     "recoil": "0.0.8",
     "rewards-v2": "file:../shared",
     "typescript": "^3.7.5",
+    "use-interval": "^1.2.1",
     "web3": "^1.2.8"
   },
   "scripts": {
@@ -28,7 +29,16 @@
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
-    "extends": "react-app"
+    "extends": [
+      "react-app"
+    ],
+    "plugins": [
+      "react-hooks"
+    ],
+    "rules": {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "error"
+    }
   },
   "browserslist": {
     "production": [
@@ -43,6 +53,8 @@
     ]
   },
   "devDependencies": {
-    "@types/recoil": "0.0.0"
+    "@types/recoil": "0.0.0",
+    "eslint-plugin-react-hooks": "^4.0.4",
+    "prettier": "^2.0.5"
   }
 }
