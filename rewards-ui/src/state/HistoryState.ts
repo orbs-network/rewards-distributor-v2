@@ -37,7 +37,6 @@ export const useSyncHistory = (historyService: IHistoryService) => {
     let effectActive = false;
 
     async function processBatch() {
-      // TODO : C.F.H : Make the basic workflow of the sync work (with finding the latest block, updating the history, saving it to hydrate, updating after each read.)
       const { eventHistory, lastProcessedBlock } = await historyService.processNextBatch(highestKnownEthereumBlock);
 
       if (effectActive) {
