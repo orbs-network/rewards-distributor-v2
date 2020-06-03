@@ -18,17 +18,25 @@ import { useBoolean } from 'react-hanger';
 import MailIcon from '@material-ui/icons/Mail';
 import InboxIcon from '@material-ui/icons/MoveToInbox';
 import Web3 from 'web3';
-import { useRecoilState, useRecoilValue } from 'recoil';
+import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
 import { drawerOpenState } from './state/StructureState';
 import { useCryptoWalletConnectionService, useHistoryService } from './services/servicesHooks';
 import {
   historyForDelegateState,
   historySyncState,
   lastHistoryBlockState,
-  usePeriodicallyUpdateBlockNumber,
+  useReactToAddressChange,
   useSyncHistory,
 } from './state/HistoryState';
 import { UPDATE_ETHEREUM_BLOCK_INTERVAL_MS } from './constants';
+import {
+  useAskPermissionForCryptoWallet,
+  useInitializeCryptoWalletConnectionState,
+  usePeriodicallyUpdateBlockNumber,
+  userAddressState,
+  useSubscribeToAddressChange,
+  walletConnectionRequestApprovedState,
+} from './state/CryptoWalletConnectionState';
 
 function App() {
   // const drawerOpen = useBoolean(false);
@@ -36,6 +44,23 @@ function App() {
   const cryptoWalletConnectionService = useCryptoWalletConnectionService();
   const [drawerOpen, setDrawerOpen] = useRecoilState(drawerOpenState);
   const [historySync, setHistorySyncState] = useRecoilState(historySyncState);
+  const userAddress = useRecoilValue(userAddressState);
+  const walletConnectionRequestApproved = useRecoilValue(walletConnectionRequestApprovedState);
+
+  // Initialize the services
+  useInitializeCryptoWalletConnectionState(cryptoWalletConnectionService);
+
+  // Callbacks
+  const askPermissionForCryptoWallet = useAskPermissionForCryptoWallet(cryptoWalletConnectionService);
+
+  // TODO : ORL : Remove this after having a proper intro screen.
+  if (!walletConnectionRequestApproved) {
+    askPermissionForCryptoWallet();
+  }
+
+  // Reacts to address change
+  useSubscribeToAddressChange(cryptoWalletConnectionService);
+  useReactToAddressChange(historyService, userAddress);
 
   // Manages periodically reading of the latest block
   usePeriodicallyUpdateBlockNumber(cryptoWalletConnectionService, UPDATE_ETHEREUM_BLOCK_INTERVAL_MS);
@@ -66,7 +91,7 @@ function App() {
       <TopBar onMenuClick={() => setDrawerOpen(!drawerOpen)} />
       {/* Dev Note : We add an empty 'Toolbar' so the drawer will start beneath the top bar*/}
       <Toolbar />
-      App
+      App - {userAddress}
       <Button onClick={resumeHistorySync} color={'secondary'} variant={'contained'}>
         Start Sync
       </Button>

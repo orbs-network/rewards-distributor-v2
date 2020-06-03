@@ -4,13 +4,9 @@ import { useCallback, useEffect } from 'react';
 import { IHistoryService } from '../services/historyService/IHistoryService';
 import { ICryptoWalletConnectionService } from '../services/cryptoWalletConnectionService/ICryptoWalletConnectionService';
 import useInterval from 'use-interval';
+import { highestKnownEthereumBlockState } from './CryptoWalletConnectionState';
 
 export type THistorySyncState = 'active' | 'paused' | 'off';
-
-export const highestKnownEthereumBlockState = atom<number>({
-  key: 'highestKnownEthereumBlockState',
-  default: 0,
-});
 
 export const historySyncState = atom<THistorySyncState>({
   key: 'historySyncState',
@@ -50,6 +46,7 @@ export const useSyncHistory = (historyService: IHistoryService) => {
       console.log('Not running');
     } else if (historySync === 'active') {
       console.log('Will start to run');
+      processBatch().catch((e) => console.error(`error while processing batch ${e}`));
     }
 
     return () => {
@@ -58,18 +55,8 @@ export const useSyncHistory = (historyService: IHistoryService) => {
   }, [highestKnownEthereumBlock, historyService, historySync]);
 };
 
-export const usePeriodicallyUpdateBlockNumber = (
-  cryptoWalletConnectionService: ICryptoWalletConnectionService,
-  intervalForUpdates: number,
-) => {
-  const setHighestKnownEthereumBlockState = useSetRecoilState(highestKnownEthereumBlockState);
-
-  const updateFunction = useCallback(async () => {
-    console.log('Reading');
-    const latestBlock = await cryptoWalletConnectionService.readCurrentBlockNumber();
-    console.log({ latestBlock });
-    setHighestKnownEthereumBlockState(latestBlock);
-  }, [cryptoWalletConnectionService, setHighestKnownEthereumBlockState]);
-
-  useInterval(updateFunction, intervalForUpdates, true);
+export const useReactToAddressChange = (historyService: IHistoryService, address: string) => {
+  useEffect(() => {
+    historyService.setAddress(address);
+  }, [address, historyService]);
 };
