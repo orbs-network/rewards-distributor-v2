@@ -7,6 +7,10 @@ import useInterval from 'use-interval';
 import { highestKnownEthereumBlockState } from './CryptoWalletConnectionState';
 
 export type THistorySyncState = 'active' | 'paused' | 'off';
+export interface IHistoryStateStorageObject {
+  latestBlock: number;
+  historyForDelegate?: EventHistory;
+}
 
 export const historySyncState = atom<THistorySyncState>({
   key: 'historySyncState',
@@ -55,7 +59,7 @@ export const useSyncHistory = (historyService: IHistoryService) => {
   }, [highestKnownEthereumBlock, historyService, historySync]);
 };
 
-export const useReactToAddressChange = (historyService: IHistoryService, address: string) => {
+export const useReactToAddressChangeEffect = (historyService: IHistoryService, address: string) => {
   useEffect(() => {
     historyService.setAddress(address);
   }, [address, historyService]);

@@ -22,7 +22,7 @@ import {
   historyForDelegateState,
   historySyncState,
   lastHistoryBlockState,
-  useReactToAddressChange,
+  useReactToAddressChangeEffect,
   useSyncHistory,
 } from './state/HistoryState';
 import { UPDATE_ETHEREUM_BLOCK_INTERVAL_MS } from './constants';
@@ -57,7 +57,7 @@ function App() {
 
   // Reacts to address change
   useSubscribeToAddressChange(cryptoWalletConnectionService);
-  useReactToAddressChange(historyService, userAddress);
+  useReactToAddressChangeEffect(historyService, userAddress);
 
   // Manages periodically reading of the latest block
   usePeriodicallyUpdateBlockNumber(cryptoWalletConnectionService, UPDATE_ETHEREUM_BLOCK_INTERVAL_MS);

@@ -18,6 +18,7 @@
     "react-scripts": "3.4.1",
     "recoil": "0.0.8",
     "rewards-v2": "file:../shared",
+    "store2": "^2.11.2",
     "typescript": "^3.7.5",
     "use-interval": "^1.2.1",
     "web3": "^1.2.8"
