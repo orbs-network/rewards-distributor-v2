@@ -75,6 +75,14 @@ export class HistoryDownloader {
     };
   }
 
+  /**
+   * This allows users to 'load' an event history object from previous sessions and to continue from the same place
+   * that they stopped at last time.
+   */
+  setEventHistory(eventHistory: EventHistory) {
+    this.history = eventHistory;
+  }
+
   // returns the last processed block number in the new batch
   // if maxBlocksInBatch is too big, exception will be thrown and up to caller to make it smaller
   async processNextBatch(maxBlocksInBatch: number, latestEthereumBlock: number, concurrency?: number): Promise<number> {

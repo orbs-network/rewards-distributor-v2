@@ -15,20 +15,23 @@ export class HistoryService implements IHistoryService {
 
   constructor(private web3: Web3) {
     // Empty downloader (no address)
-    this.historyDownloader = new HistoryDownloader('', genesisBlockNumber, true);
+    this.historyDownloader = new HistoryDownloader('', genesisBlockNumber);
+
+    this.historyDownloader.setEthereumContracts(this.web3, {
+      Committee: mainNetCommitteeAddress,
+      Delegations: mainNetDelegationAddress,
+      StakingRewards: mainNetStakingRewardsAddress,
+    });
   }
 
   public setAddress(address: string) {
     if (address !== this.historyDownloader.history.delegateAddress) {
-      console.log('Setting for', address);
-      this.historyDownloader = new HistoryDownloader(address, genesisBlockNumber, true);
-
-      this.historyDownloader.setEthereumContracts(this.web3, {
-        Committee: mainNetCommitteeAddress,
-        Delegations: mainNetDelegationAddress,
-        StakingRewards: mainNetStakingRewardsAddress,
-      });
+      this.historyDownloader = new HistoryDownloader(address, genesisBlockNumber);
     }
+  }
+
+  public loadExistingEventHistory(eventHistory: EventHistory): void {
+    this.historyDownloader.setEventHistory(eventHistory);
   }
 
   public async processNextBatch(
@@ -58,11 +61,6 @@ export class HistoryService implements IHistoryService {
 
     while (maxProcessedBlock < latestEthereumBlock) {
       maxProcessedBlock = await historyDownloader.processNextBatch(numBlocksPerBatch, latestEthereumBlock);
-      console.log(`Done ${maxProcessedBlock} / ${latestEthereumBlock}`);
-      console.log(historyDownloader.history);
     }
-
-    // present the historic data
-    console.log(historyDownloader.history);
   }
 }

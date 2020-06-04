@@ -17,13 +17,13 @@ import InboxIcon from '@material-ui/icons/MoveToInbox';
 import Web3 from 'web3';
 import { useRecoilState, useRecoilValue } from 'recoil';
 import { drawerOpenState } from './state/StructureState';
-import { useCryptoWalletConnectionService, useHistoryService } from './services/servicesHooks';
+import { useCryptoWalletConnectionService, useHistoryService, useStorageService } from './services/servicesHooks';
 import {
   historyForDelegateState,
   historySyncState,
   lastHistoryBlockState,
   useReactToAddressChangeEffect,
-  useSyncHistory,
+  useContinuousHistorySyncEffect,
 } from './state/HistoryState';
 import { UPDATE_ETHEREUM_BLOCK_INTERVAL_MS } from './constants';
 import {
@@ -39,13 +39,14 @@ import { useInitStatesEffect } from './state/CollectiveStateHooks';
 function App() {
   const historyService = useHistoryService();
   const cryptoWalletConnectionService = useCryptoWalletConnectionService();
+  const storageService = useStorageService();
   const [drawerOpen, setDrawerOpen] = useRecoilState(drawerOpenState);
   const [historySync, setHistorySyncState] = useRecoilState(historySyncState);
   const userAddress = useRecoilValue(userAddressState);
   const walletConnectionRequestApproved = useRecoilValue(walletConnectionRequestApprovedState);
 
   // Initialize the State(s)
-  useInitStatesEffect(cryptoWalletConnectionService);
+  useInitStatesEffect(cryptoWalletConnectionService, historyService, storageService);
 
   // Callbacks
   const askPermissionForCryptoWallet = useAskPermissionForCryptoWallet(cryptoWalletConnectionService);
@@ -63,7 +64,7 @@ function App() {
   usePeriodicallyUpdateBlockNumber(cryptoWalletConnectionService, UPDATE_ETHEREUM_BLOCK_INTERVAL_MS);
 
   // Manages the syncing of the history
-  useSyncHistory(historyService);
+  useContinuousHistorySyncEffect(historyService, storageService);
 
   // @ts-ignore
   const ethereum = window.ethereum;
