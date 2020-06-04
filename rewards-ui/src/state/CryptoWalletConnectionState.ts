@@ -18,21 +18,30 @@ export const walletConnectionRequestApprovedState = atom<boolean>({
   default: false,
 });
 
-export const useInitializeCryptoWalletConnectionState = (
+export const useInitializeCryptoWalletConnectionStateFunction = (
   cryptoWalletConnectionService: ICryptoWalletConnectionService,
 ) => {
   const setWalletConnectionRequestApprovedState = useSetRecoilState(walletConnectionRequestApprovedState);
   const setUserAddressState = useSetRecoilState(userAddressState);
 
-  useEffect(() => {
+  const initializeFunction = useCallback(() => {
     setWalletConnectionRequestApprovedState(cryptoWalletConnectionService.didUserApproveDappInThePast);
     cryptoWalletConnectionService.readMainAddress().then((address) => setUserAddressState(address));
-  }, [
+  }, [cryptoWalletConnectionService, setUserAddressState, setWalletConnectionRequestApprovedState]);
+
+  return initializeFunction;
+};
+
+export const useInitializeCryptoWalletConnectionStateEffect = (
+  cryptoWalletConnectionService: ICryptoWalletConnectionService,
+) => {
+  const initializeCryptoWalletConnectionStateFunction = useInitializeCryptoWalletConnectionStateFunction(
     cryptoWalletConnectionService,
-    cryptoWalletConnectionService.didUserApproveDappInThePast,
-    setUserAddressState,
-    setWalletConnectionRequestApprovedState,
-  ]);
+  );
+
+  useEffect(() => {
+    initializeCryptoWalletConnectionStateFunction();
+  }, [initializeCryptoWalletConnectionStateFunction]);
 };
 
 export const usePeriodicallyUpdateBlockNumber = (

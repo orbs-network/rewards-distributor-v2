@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
-import logo from './logo.svg';
 import './App.css';
-import { sum } from 'rewards-v2/dist/src/sum';
 import {
   Button,
   Container,
@@ -14,11 +12,10 @@ import {
   Toolbar,
 } from '@material-ui/core';
 import { TopBar } from './componentes/structure/TopBar';
-import { useBoolean } from 'react-hanger';
 import MailIcon from '@material-ui/icons/Mail';
 import InboxIcon from '@material-ui/icons/MoveToInbox';
 import Web3 from 'web3';
-import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
+import { useRecoilState, useRecoilValue } from 'recoil';
 import { drawerOpenState } from './state/StructureState';
 import { useCryptoWalletConnectionService, useHistoryService } from './services/servicesHooks';
 import {
@@ -31,15 +28,15 @@ import {
 import { UPDATE_ETHEREUM_BLOCK_INTERVAL_MS } from './constants';
 import {
   useAskPermissionForCryptoWallet,
-  useInitializeCryptoWalletConnectionState,
+  useInitializeCryptoWalletConnectionStateEffect,
   usePeriodicallyUpdateBlockNumber,
   userAddressState,
   useSubscribeToAddressChange,
   walletConnectionRequestApprovedState,
 } from './state/CryptoWalletConnectionState';
+import { useInitStatesEffect } from './state/CollectiveStateHooks';
 
 function App() {
-  // const drawerOpen = useBoolean(false);
   const historyService = useHistoryService();
   const cryptoWalletConnectionService = useCryptoWalletConnectionService();
   const [drawerOpen, setDrawerOpen] = useRecoilState(drawerOpenState);
@@ -47,8 +44,8 @@ function App() {
   const userAddress = useRecoilValue(userAddressState);
   const walletConnectionRequestApproved = useRecoilValue(walletConnectionRequestApprovedState);
 
-  // Initialize the services
-  useInitializeCryptoWalletConnectionState(cryptoWalletConnectionService);
+  // Initialize the State(s)
+  useInitStatesEffect(cryptoWalletConnectionService);
 
   // Callbacks
   const askPermissionForCryptoWallet = useAskPermissionForCryptoWallet(cryptoWalletConnectionService);
@@ -68,20 +65,11 @@ function App() {
   // Manages the syncing of the history
   useSyncHistory(historyService);
 
-  useEffect(() => {
-    // historyService.downloadHistoryForAddress('0xC5e624d6824e626a6f14457810E794E4603CFee2');
-    // historyService.downloadHistoryForAddress('0xf7ae622C77D0580f02Bcb2f92380d61e3F6e466c');
-  }, [historyService]);
-
   // @ts-ignore
   const ethereum = window.ethereum;
   const web3Instance = useMemo(() => {
     return new Web3(ethereum);
   }, [ethereum]);
-
-  const onC = useCallback(() => {
-    console.log('Clicked');
-  }, []);
 
   const resumeHistorySync = useCallback(() => setHistorySyncState('active'), [setHistorySyncState]);
   const pauseHistorySync = useCallback(() => setHistorySyncState('paused'), [setHistorySyncState]);
