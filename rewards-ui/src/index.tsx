@@ -2,13 +2,13 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import * as serviceWorker from './serviceWorker';
-import {AppWrapper} from "./AppWrapper";
+import { AppWrapper } from './AppWrapper';
 
 ReactDOM.render(
   <React.StrictMode>
     <AppWrapper />
   </React.StrictMode>,
-  document.getElementById('root')
+  document.getElementById('root'),
 );
 
 // If you want your app to work offline and load faster, you can change
