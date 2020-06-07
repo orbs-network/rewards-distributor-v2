@@ -39,6 +39,8 @@ import {BrowserRouter as Router, Switch, Route, Link} from 'react-router-dom';
 import {ListItemLink} from "./componentes/links/ListItemLink";
 import {HomePage} from "./pages/HomePage";
 import {SyncPage} from "./pages/SyncPage";
+import {NoEthereumProviderPage} from "./pages/NoEthereumProviderPage";
+import {ConnectMetaMaskPage} from "./pages/ConnectMetamaskPage";
 
 function App() {
     const historyService = useHistoryService();
@@ -54,11 +56,6 @@ function App() {
     // Callbacks
     const askPermissionForCryptoWallet = useAskPermissionForCryptoWallet(cryptoWalletConnectionService);
 
-    // TODO : ORL : Remove this after having a proper intro screen.
-    if (!walletConnectionRequestApproved) {
-        askPermissionForCryptoWallet();
-    }
-
     // Reacts to address change
     useSubscribeToAddressChange(cryptoWalletConnectionService);
     useReactToAddressChangeEffect(historyService, userAddress);
@@ -69,12 +66,9 @@ function App() {
     // Manages the syncing of the history
     useContinuousHistorySyncEffect(historyService, storageService);
 
-    // @ts-ignore
-    const ethereum = window.ethereum;
-    const web3Instance = useMemo(() => {
-        return new Web3(ethereum);
-    }, [ethereum]);
-
+    if (!walletConnectionRequestApproved) {
+        return <ConnectMetaMaskPage connectToMetaMask={askPermissionForCryptoWallet}  />
+    }
 
     return (
         <Container>

@@ -11,9 +11,7 @@ export const SyncGauge = React.memo<IProps>(props => {
    const { lowestBlock, highestBlock, currentSyncedBlock } = props;
 
    const range = highestBlock - lowestBlock;
-   console.log({range})
    const completePart = currentSyncedBlock - lowestBlock;
-   console.log({completePart})
    const percentage = completePart / range;
 
    return <GaugeChart id="gauge-chart6"

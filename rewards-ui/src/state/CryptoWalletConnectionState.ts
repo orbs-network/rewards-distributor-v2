@@ -80,7 +80,14 @@ export const useSubscribeToAddressChange = (cryptoWalletConnectionService: ICryp
 };
 
 export const useAskPermissionForCryptoWallet = (cryptoWalletConnectionService: ICryptoWalletConnectionService) => {
+  const setWalletConnectionRequestApprovedState = useSetRecoilState(walletConnectionRequestApprovedState);
+
   return useCallback(async () => {
-    const response = await cryptoWalletConnectionService.requestConnectionPermission();
-  }, [cryptoWalletConnectionService]);
+    const allowedConnection = await cryptoWalletConnectionService.requestConnectionPermission();
+
+    if (allowedConnection) {
+      setWalletConnectionRequestApprovedState(true);
+    }
+
+  }, [cryptoWalletConnectionService, setWalletConnectionRequestApprovedState]);
 };
