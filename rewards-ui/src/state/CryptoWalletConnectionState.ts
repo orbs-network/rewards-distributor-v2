@@ -44,18 +44,25 @@ export const useInitializeCryptoWalletConnectionStateEffect = (
   }, [initializeCryptoWalletConnectionStateFunction]);
 };
 
+export const useUpdateLatestBlockNumberCB = (cryptoWalletConnectionService: ICryptoWalletConnectionService,) => {
+  const setHighestKnownEthereumBlockState = useSetRecoilState(highestKnownEthereumBlockState);
+
+  const updateLatestBlockNumber =  useCallback(async () => {
+    const latestBlock = await cryptoWalletConnectionService.readCurrentBlockNumber();
+    console.log({latestBlock});
+    setHighestKnownEthereumBlockState(latestBlock);
+  }, [cryptoWalletConnectionService, setHighestKnownEthereumBlockState]);
+
+  return updateLatestBlockNumber;
+}
+
 export const usePeriodicallyUpdateBlockNumber = (
   cryptoWalletConnectionService: ICryptoWalletConnectionService,
   intervalForUpdates: number,
 ) => {
   const setHighestKnownEthereumBlockState = useSetRecoilState(highestKnownEthereumBlockState);
 
-  const updateFunction = useCallback(async () => {
-    console.log('Reading');
-    const latestBlock = await cryptoWalletConnectionService.readCurrentBlockNumber();
-    console.log({ latestBlock });
-    setHighestKnownEthereumBlockState(latestBlock);
-  }, [cryptoWalletConnectionService, setHighestKnownEthereumBlockState]);
+  const updateFunction = useUpdateLatestBlockNumberCB(cryptoWalletConnectionService);
 
   useInterval(updateFunction, intervalForUpdates, true);
 };

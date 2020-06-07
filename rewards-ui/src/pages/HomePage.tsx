@@ -11,20 +11,10 @@ interface IProps {
 
 export const HomePage = React.memo<IProps>(props => {
     const userAddress = useRecoilValue(userAddressState);
-    const [historySync, setHistorySyncState] = useRecoilState(historySyncState);
-
-    const resumeHistorySync = useCallback(() => setHistorySyncState('active'), [setHistorySyncState]);
-    const pauseHistorySync = useCallback(() => setHistorySyncState('paused'), [setHistorySyncState]);
 
     return (
         <>
             App - {userAddress}
-            <Button onClick={resumeHistorySync} color={'secondary'} variant={'contained'}>
-                Start Sync
-            </Button>
-            <Button onClick={pauseHistorySync} color={'secondary'} variant={'contained'}>
-                Pause Sync
-            </Button>
         </>
     )
 });

@@ -2,10 +2,8 @@ import Web3 from 'web3';
 import { IHistoryService } from './IHistoryService';
 import { HistoryDownloader } from 'rewards-v2/dist/src';
 import { EventHistory } from 'rewards-v2/dist/src/history';
+import {GENESIS_BLOCK_NUMBER} from "../../constants";
 
-const ORBS_CONTRACT_DEPLOYMENT_BLOCK = 5710114;
-const ORBS_FIRST_TRANSACTION_BLOCK = 7437000;
-const genesisBlockNumber = ORBS_FIRST_TRANSACTION_BLOCK; // ethereum block number earlier than when Orbs PoS contracts deployed
 const mainNetCommitteeAddress = '0x550f66F3248aa594376638277F0290D462C9Df9E';
 const mainNetDelegationAddress = '0x6333c9549095651fCc8252345d6898208eBE8aaa';
 const mainNetStakingRewardsAddress = '0x87ed2d308D30EE8c170627aCdc54d6d75CaB6bDc';
@@ -15,7 +13,7 @@ export class HistoryService implements IHistoryService {
 
   constructor(private web3: Web3) {
     // Empty downloader (no address)
-    this.historyDownloader = new HistoryDownloader('', genesisBlockNumber);
+    this.historyDownloader = new HistoryDownloader('', GENESIS_BLOCK_NUMBER);
 
     this.historyDownloader.setEthereumContracts(this.web3, {
       Committee: mainNetCommitteeAddress,
@@ -26,7 +24,7 @@ export class HistoryService implements IHistoryService {
 
   public setAddress(address: string) {
     if (address !== this.historyDownloader.history.delegateAddress) {
-      this.historyDownloader = new HistoryDownloader(address, genesisBlockNumber);
+      this.historyDownloader = new HistoryDownloader(address, GENESIS_BLOCK_NUMBER);
     }
   }
 
@@ -47,7 +45,7 @@ export class HistoryService implements IHistoryService {
 
   public async downloadHistoryForAddress(address: string): Promise<void> {
     const latestEthereumBlock = await this.web3.eth.getBlockNumber();
-    const historyDownloader = new HistoryDownloader(address, genesisBlockNumber, true);
+    const historyDownloader = new HistoryDownloader(address, GENESIS_BLOCK_NUMBER, true);
 
     historyDownloader.setEthereumContracts(this.web3, {
       Committee: mainNetCommitteeAddress,
