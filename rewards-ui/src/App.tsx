@@ -35,13 +35,15 @@ import {
   walletConnectionRequestApprovedState,
 } from './state/CryptoWalletConnectionState';
 import { useInitStatesEffect } from './state/CollectiveStateHooks';
-
+import {BrowserRouter as Router, Switch, Route, Link } from 'react-router-dom';
+import {ListItemLink} from "./componentes/links/ListItemLink";
+import {HomePage} from "./pages/HomePage";
+import {SyncPage} from "./pages/SyncPage";
 function App() {
   const historyService = useHistoryService();
   const cryptoWalletConnectionService = useCryptoWalletConnectionService();
   const storageService = useStorageService();
   const [drawerOpen, setDrawerOpen] = useRecoilState(drawerOpenState);
-  const [historySync, setHistorySyncState] = useRecoilState(historySyncState);
   const userAddress = useRecoilValue(userAddressState);
   const walletConnectionRequestApproved = useRecoilValue(walletConnectionRequestApprovedState);
 
@@ -72,41 +74,37 @@ function App() {
     return new Web3(ethereum);
   }, [ethereum]);
 
-  const resumeHistorySync = useCallback(() => setHistorySyncState('active'), [setHistorySyncState]);
-  const pauseHistorySync = useCallback(() => setHistorySyncState('paused'), [setHistorySyncState]);
+
 
   return (
-    <>
+    <Router>
       <TopBar onMenuClick={() => setDrawerOpen(!drawerOpen)} />
       {/* Dev Note : We add an empty 'Toolbar' so the drawer will start beneath the top bar*/}
       <Toolbar />
-      App - {userAddress}
-      <Button onClick={resumeHistorySync} color={'secondary'} variant={'contained'}>
-        Start Sync
-      </Button>
-      <Button onClick={pauseHistorySync} color={'secondary'} variant={'contained'}>
-        Pause Sync
-      </Button>
-      <Drawer anchor={'left'} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+      <Switch>
+        <Route path={'/home'}>
+          <HomePage />
+        </Route>
+        <Route path={'/sync'}>
+          <SyncPage />
+        </Route>
+        {/* Default will go to home page */}
+        <Route path={'/'}>
+          <HomePage/>
+        </Route>
+      </Switch>
+
+      {/* Side drawer */}
+      <Drawer anchor={'left'} open={drawerOpen} onClose={() => setDrawerOpen(false)} onClick={() => setDrawerOpen(false)}>
         {/* Dev Note : We add an empty 'Toolbar' so the drawer will start beneath the top bar*/}
         <Toolbar />
         <List>
-          <ListItem>
-            <ListItemIcon>
-              <MailIcon />
-            </ListItemIcon>
-            <ListItemText primary={'First Link'} />
-          </ListItem>
+          <ListItemLink to={'/home'} primary={"home"} icon={<MailIcon/>}/>
           <Divider />
-          <ListItem>
-            <ListItemIcon>
-              <InboxIcon />
-            </ListItemIcon>
-            <ListItemText primary={'Other Link'} />
-          </ListItem>
+          <ListItemLink to={'/sync'} primary={"Sync"} icon={<InboxIcon/>}/>
         </List>
       </Drawer>
-    </>
+    </Router>
   );
 }
 
