@@ -58,6 +58,8 @@
 
 - Once we have the division for each assignment, sum all of the divisions together to get the total division for all assignments together that took place in the distribution block period.
 
+- The Ethereum contracts limit the granularity of distribution to milli-ORBS (1e15). Therefore, the division must be fixed first with `fixDivisionGranularity()` and all amounts are rounded down to this granularity. The delegate receives all the residue.
+
 - Once the total division is known (how much each delegator should receive in this entire distribution), start distributing with `Distribution.sendNextTransaction()`.
 
     - The recipients are sorted by address and each one appears in exactly one transaction.
