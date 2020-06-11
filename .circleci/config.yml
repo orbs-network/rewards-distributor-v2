@@ -1,0 +1,41 @@
+version: 2.1
+orbs:
+  node: circleci/node@1.1.6
+  docker: circleci/docker@0.5.19
+jobs:
+  build-and-test:
+    machine: true
+    steps:
+      - checkout
+      - node/install:
+          node-version: '12.13.0'
+      - docker/install-docker
+      - run: node --version
+      - run: npm --version
+      - run: docker --version
+      - run: env
+      - node/with-cache:
+          steps:
+            - run: cd shared
+            - run: npm install
+            - run: npm install --save-dev jest-junit
+      - run:
+          name: spinning up ganache
+          command: npm run start-ganache
+          background: true
+      - run: mkdir -p _out/unit _out/e2e
+      - node/with-cache:
+          steps:
+            - run: npm test -- --ci --runInBand --reporters=default --reporters=jest-junit > _out/unit/test.xml
+            - run: npm run build
+            - run: 
+                command: npm run test:e2e -- --ci --runInBand --reporters=default --reporters=jest-junit > _out/e2e/test.xml
+      - store_test_results:
+          path: _out
+      - store_artifacts:
+          path: _out    
+  
+workflows:
+  build-and-test:
+    jobs:
+      - build-and-test
