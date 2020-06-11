@@ -16,20 +16,17 @@ jobs:
       - run: env
       - node/with-cache:
           steps:
-            - run: cd shared
-            - run: npm install
-            - run: npm install --save-dev jest-junit
+            - run: cd shared && npm install
+            - run: cd shared && npm install --save-dev jest-junit
       - run:
           name: spinning up ganache
-          command: npm run start-ganache
+          command: cd shared && npm run start-ganache
           background: true
-      - run: mkdir -p _out/unit _out/e2e
+      - run: cd shared && mkdir -p _out/unit _out/e2e
       - node/with-cache:
           steps:
-            - run: npm test -- --ci --runInBand --reporters=default --reporters=jest-junit > _out/unit/test.xml
-            - run: npm run build
-            - run: 
-                command: npm run test:e2e -- --ci --runInBand --reporters=default --reporters=jest-junit > _out/e2e/test.xml
+            - run: cd shared && npm test -- --ci --runInBand --reporters=default --reporters=jest-junit > _out/unit/test.xml
+            - run: cd shared && npm run test:e2e -- --ci --runInBand --reporters=default --reporters=jest-junit > _out/e2e/test.xml
       - store_test_results:
           path: _out
       - store_artifacts:
