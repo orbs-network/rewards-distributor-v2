@@ -1,5 +1,5 @@
 import BN from 'bn.js';
-import { bnDivideAsNumber, bnMultiplyByNumber } from './helpers';
+import { bnDivideAsNumber, bnMultiplyByNumber, bnAddZeroes } from './helpers';
 
 describe('bnDivideAsNumber', () => {
   it('works', () => {
@@ -22,5 +22,12 @@ describe('bnMultiplyByNumber', () => {
     expect(bnMultiplyByNumber(new BN('1000000000000000000000000000000000'), 0.5)).toEqual(
       new BN('500000000000000000000000000000000')
     );
+  });
+});
+
+describe('bnAddZeroes', () => {
+  it('works', () => {
+    expect(bnAddZeroes(17, 2)).toEqual(new BN(1700));
+    expect(bnAddZeroes(17, 15)).toEqual(new BN('17000000000000000'));
   });
 });

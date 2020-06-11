@@ -1,6 +1,6 @@
 import { EventHistory } from './history';
 import BN from 'bn.js';
-import { Calculator } from './calculator';
+import { Calculator, Division } from './calculator';
 import { CommitteeAccumulator, DelegationsAccumulator } from './accumulator';
 
 const getHistoryWithAssignments = () => {
@@ -285,5 +285,81 @@ describe('calcDivisionForSingleAssignment', () => {
     expect(division.amounts['D1']).toEqual(new BN(9000));
     expect(division.amounts['D2']).toEqual(new BN(3000));
     expect(division.amounts['D3']).toEqual(new BN(12000));
+  });
+});
+
+const getDivisionWithIndivisibleTotal = () => {
+  const d: Division = { amounts: {} };
+  d.amounts['G1'] = new BN(1000);
+  d.amounts['D1'] = new BN(453);
+  d.amounts['D2'] = new BN(1202);
+  return d; // granularity = 1000
+};
+
+const getDivisionWithDivisibleTotal = () => {
+  const d: Division = { amounts: {} };
+  d.amounts['G1'] = new BN(1901);
+  d.amounts['D1'] = new BN(1000);
+  d.amounts['D2'] = new BN(315);
+  d.amounts['D3'] = new BN(2732);
+  d.amounts['D4'] = new BN(1052);
+  d.amounts['D5'] = new BN(0);
+  return d; // granularity = 1000
+};
+
+const getDivisionWithoutResidue = () => {
+  const d: Division = { amounts: {} };
+  d.amounts['G1'] = new BN(2000);
+  d.amounts['D1'] = new BN(1000);
+  d.amounts['D2'] = new BN(0);
+  return d; // granularity = 1000
+};
+
+describe('fixDivisionGranularity', () => {
+  it('fails if the division total is not divisible by granularity', () => {
+    const d = getDivisionWithIndivisibleTotal();
+    expect(() => {
+      Calculator.fixDivisionGranularity(d, new BN(1000), 'G1');
+    }).toThrow();
+  });
+
+  it('gives residue to existing and floors everybody else', () => {
+    const d = getDivisionWithDivisibleTotal();
+    const division = Calculator.fixDivisionGranularity(d, new BN(1000), 'G1');
+    expect(division.amounts['D1']).toEqual(new BN(1000));
+    expect(division.amounts['D2']).toEqual(new BN(0));
+    expect(division.amounts['D3']).toEqual(new BN(2000));
+    expect(division.amounts['D4']).toEqual(new BN(1000));
+    expect(division.amounts['D5']).toEqual(new BN(0));
+    expect(division.amounts['G1']).toEqual(new BN(3000));
+  });
+
+  it('gives residue to non-existing and floors everybody else', () => {
+    const d = getDivisionWithDivisibleTotal();
+    const division = Calculator.fixDivisionGranularity(d, new BN(1000), 'G2');
+    expect(division.amounts['D1']).toEqual(new BN(1000));
+    expect(division.amounts['D2']).toEqual(new BN(0));
+    expect(division.amounts['D3']).toEqual(new BN(2000));
+    expect(division.amounts['D4']).toEqual(new BN(1000));
+    expect(division.amounts['D5']).toEqual(new BN(0));
+    expect(division.amounts['G1']).toEqual(new BN(1000));
+    expect(division.amounts['G2']).toEqual(new BN(2000));
+  });
+
+  it('handles no residue when giving to existing', () => {
+    const d = getDivisionWithoutResidue();
+    const division = Calculator.fixDivisionGranularity(d, new BN(1000), 'G1');
+    expect(division.amounts['G1']).toEqual(new BN(2000));
+    expect(division.amounts['D1']).toEqual(new BN(1000));
+    expect(division.amounts['D2']).toEqual(new BN(0));
+  });
+
+  it('handles no residue when giving to non-existing', () => {
+    const d = getDivisionWithoutResidue();
+    const division = Calculator.fixDivisionGranularity(d, new BN(1000), 'G2');
+    expect(division.amounts['G1']).toEqual(new BN(2000));
+    expect(division.amounts['D1']).toEqual(new BN(1000));
+    expect(division.amounts['D2']).toEqual(new BN(0));
+    expect(division.amounts['G2']).toBeUndefined();
   });
 });

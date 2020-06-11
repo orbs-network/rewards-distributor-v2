@@ -50,6 +50,10 @@ const getHistoryWithSeveralDistributions = () => {
   return h;
 };
 
+beforeAll(() => {
+  Distribution.granularity = new BN(100);
+});
+
 describe('getLast', () => {
   it('fails if out of bounds', () => {
     expect(() => {

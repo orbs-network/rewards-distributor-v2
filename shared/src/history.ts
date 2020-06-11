@@ -7,22 +7,26 @@ import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/rele
 import { bnZero, bnDivideAsNumber } from './helpers';
 import { EthereumContractAddresses } from '.';
 
+// internal abstracted model to hold delegation events
 export interface DelegationChangeEvent {
   block: number;
   delegatorAddress: string;
   newDelegatedStake: BN; // total stake of this delegator that is staked towards this delegate
 }
 
+// internal abstracted model to hold committee changes
 export interface CommitteeChangeEvent {
   block: number;
   newRelativeWeightInCommittee: number; // [0,1] if delegate has half the effective stake of the committee then 0.5, if not in committee then 0
 }
 
+// internal abstracted model to hold assignments events
 export interface AssignmentEvent {
   block: number;
   amount: BN; // incoming payment to the delegate by the protocol for distribution
 }
 
+// internal abstracted model to hold distribution events
 export interface DistributionEvent {
   block: number;
   recipientAddresses: string[];
@@ -37,6 +41,7 @@ export interface Split {
   fractionForDelegators: number; // eg. 0.70 to give delegators 70% and keep 30%
 }
 
+// the main data model
 export class EventHistory {
   public lastProcessedBlock = 0;
   public delegationChangeEvents: DelegationChangeEvent[] = [];
@@ -48,13 +53,14 @@ export class EventHistory {
 
 const DEFAULT_CONCURRENCY = 5;
 
+// the main external api to populate the data model (synchronize over all event history)
 export class HistoryDownloader {
   public history: EventHistory;
   public extraHistoryPerDelegate: { [delegateAddress: string]: EventHistory } = {}; // optional for additional analytics
   private ethereumContracts?: {
     Committee: Contract;
     Delegations: Contract;
-    StakingRewards: Contract;
+    Rewards: Contract;
   };
 
   constructor(delegateAddress: string, startingBlock: number, private storeExtraHistoryPerDelegate = false) {
@@ -66,10 +72,7 @@ export class HistoryDownloader {
     this.ethereumContracts = {
       Committee: new web3.eth.Contract(compiledContracts.Committee.abi, ethereumContractAddresses.Committee),
       Delegations: new web3.eth.Contract(compiledContracts.Delegations.abi, ethereumContractAddresses.Delegations),
-      StakingRewards: new web3.eth.Contract(
-        compiledContracts.StakingRewards.abi,
-        ethereumContractAddresses.StakingRewards
-      ),
+      Rewards: new web3.eth.Contract(compiledContracts.Rewards.abi, ethereumContractAddresses.Rewards),
     };
   }
 
@@ -91,8 +94,8 @@ export class HistoryDownloader {
     const requests = [];
     requests[0] = limit(() => this._web3ReadEvents('Committee', 'CommitteeChanged', fromBlock, toBlock));
     requests[1] = limit(() => this._web3ReadEvents('Delegations', 'DelegatedStakeChanged', fromBlock, toBlock));
-    requests[2] = limit(() => this._web3ReadEvents('StakingRewards', 'StakingRewardAssigned', fromBlock, toBlock));
-    requests[3] = limit(() => this._web3ReadEvents('StakingRewards', 'StakingRewardsDistributed', fromBlock, toBlock));
+    requests[2] = limit(() => this._web3ReadEvents('Rewards', 'StakingRewardsAssigned', fromBlock, toBlock));
+    requests[3] = limit(() => this._web3ReadEvents('Rewards', 'StakingRewardsDistributed', fromBlock, toBlock));
 
     const results = await Promise.all(requests);
     const d1 = HistoryDownloader._parseCommitteeChangedEvents(results[0], this.history);
@@ -128,7 +131,7 @@ export class HistoryDownloader {
 
   // TODO: add support for filters when ready (to optimize)
   async _web3ReadEvents(
-    contract: 'Committee' | 'Delegations' | 'StakingRewards',
+    contract: 'Committee' | 'Delegations' | 'Rewards',
     event: string,
     fromBlock: number,
     toBlock: number
@@ -171,7 +174,7 @@ export class HistoryDownloader {
     return Object.keys(allDelegates);
   }
 
-  // appends events to history, returns all delegates it encountered
+  // appends events relevant to the delegate to history, returns all delegates it encountered
   static _parseDelegationChangedEvents(events: EventData[], history: EventHistory): string[] {
     const allDelegates: { [delegateAddress: string]: boolean } = {};
     for (const event of events) {
@@ -189,22 +192,24 @@ export class HistoryDownloader {
     return Object.keys(allDelegates);
   }
 
-  // appends events to history, returns all delegates it encountered
+  // appends events relevant to the delegate to history, returns all delegates it encountered
   static _parseRewardsAssignedEvents(events: EventData[], history: EventHistory) {
     const allDelegates: { [delegateAddress: string]: boolean } = {};
     for (const event of events) {
       // for debug: console.log(event.blockNumber, event.returnValues);
-      allDelegates[event.returnValues.assignee] = true;
-      if (event.returnValues.assignee.toLowerCase() != history.delegateAddress.toLowerCase()) continue;
-      history.assignmentEvents.push({
-        block: event.blockNumber,
-        amount: new BN(event.returnValues.amount),
-      });
+      for (let i = 0; i < event.returnValues.assignees.length; i++) {
+        allDelegates[event.returnValues.assignees[i]] = true;
+        if (event.returnValues.assignees[i].toLowerCase() != history.delegateAddress.toLowerCase()) continue;
+        history.assignmentEvents.push({
+          block: event.blockNumber,
+          amount: new BN(event.returnValues.amounts[i]),
+        });
+      }
     }
     return Object.keys(allDelegates);
   }
 
-  // appends events to history, returns all delegates it encountered
+  // appends events relevant to the delegate to history, returns all delegates it encountered
   static _parseRewardsDistributedEvents(events: EventData[], history: EventHistory) {
     const allDelegates: { [delegateAddress: string]: boolean } = {};
     for (const event of events) {

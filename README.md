@@ -40,10 +40,9 @@ TypeScript shared code with all core logic for rewards calcs used by the other p
   ```
   npm run start-ganache
   npm run test:e2e
-  npm run stop-ganache
   ```
 
-  > Check if ganache is running with `lsof -iTCP -sTCP:LISTEN -n -P` (look for port 7545)
+  > Tip: Check if ganache is running with `lsof -iTCP -sTCP:LISTEN -n -P` (look for port 7545)
 
 ### Build and deploy
 
