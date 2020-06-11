@@ -2,6 +2,7 @@ import BN from 'bn.js';
 import { EventHistory } from './history';
 import { bnDivideAsNumber, bnZero } from './helpers';
 
+// internal class used by Calculator to do event sourcing
 export class CommitteeAccumulator {
   private nextIndex: number;
   private currentState: number; // before applying nextIndex
@@ -39,6 +40,7 @@ export interface DelegationsSnapshot {
   relativeWeight: { [delegatorAddress: string]: number }; // [0,1] if delegator has half the stake of the delegate then 0.5, if not staking the delegate then 0
 }
 
+// internal class used by Calculator to do event sourcing
 export class DelegationsAccumulator {
   private nextIndex: number;
   private currentState: DelegationsSnapshot; // before applying nextIndex

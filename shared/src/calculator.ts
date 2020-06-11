@@ -3,12 +3,15 @@ import { EventHistory, findLowestClosestIndexToBlock, Split } from './history';
 import { CommitteeAccumulator, DelegationsAccumulator } from './accumulator';
 import { bnMultiplyByNumber } from './helpers';
 
+// data structure to hold how much every delegator is owed
 export interface Division {
   amounts: { [recipientAddress: string]: BN };
 }
 
+// internal class with static functions used to calculate a division (how much every delegator is owed)
 export class Calculator {
-  // calls calcDivisionForSingleAssignment on each assignment to divide an entire perios of assignments
+  // calls calcDivisionForSingleAssignment on each assignment to divide an entire perios of assignments (adds them up)
+  // returns an accurate division ignoring any granularity constraints (see fixDivisionGranularity if needed)
   static calcDivisionForBlockPeriod(
     firstBlock: number,
     lastBlock: number,
@@ -57,6 +60,8 @@ export class Calculator {
     return res;
   }
 
+  // finds all the blocks relevant for this assignment and based on them calculates the division
+  // returns an accurate division ignoring any granularity constraints (see fixDivisionGranularity if needed)
   static calcDivisionForSingleAssignment(
     assignmentEventIndex: number,
     split: Split,
@@ -125,6 +130,34 @@ export class Calculator {
     amountForDelegate.iadd(assignmentAmountForDelegate);
     res.amounts[history.delegateAddress] = amountForDelegate;
 
+    return res;
+  }
+
+  // takes an accurate division that does not obey granularity rules and enforces granularity rules
+  // any extra residue will all be given to residueRecipientAddress in the division
+  // if the total of the division does not meet granularity constraint, throws an error
+  static fixDivisionGranularity(division: Division, granularity: BN, residueRecipientAddress: string): Division {
+    const total = new BN(0);
+    for (const [, amount] of Object.entries(division.amounts)) total.iadd(amount);
+    if (!total.umod(granularity).isZero()) {
+      throw new Error(`Division total ${total} is not divisible by granularity ${granularity}.`);
+    }
+
+    // floor everybody
+    const totalResidue = new BN(0);
+    const res: Division = { amounts: {} };
+    for (const [recipientAddress, amount] of Object.entries(division.amounts)) {
+      const residue = amount.umod(granularity);
+      res.amounts[recipientAddress] = amount.sub(residue);
+      totalResidue.iadd(residue);
+    }
+
+    // done?
+    if (totalResidue.isZero()) return res;
+
+    // give the residue
+    if (!res.amounts[residueRecipientAddress]) res.amounts[residueRecipientAddress] = new BN(0);
+    res.amounts[residueRecipientAddress].iadd(totalResidue);
     return res;
   }
 }

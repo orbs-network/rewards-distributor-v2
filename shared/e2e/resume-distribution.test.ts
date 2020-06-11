@@ -1,6 +1,7 @@
-import { TestkitDriver, log } from './driver';
+import { TestkitDriver, log, inflate15 } from './driver';
 import { HistoryDownloader, Distribution } from '../src';
 import BN from 'bn.js';
+import { bnAddZeroes } from '../src/helpers';
 
 jest.setTimeout(60000);
 
@@ -21,7 +22,7 @@ describe('resume distribution', () => {
       0,
       driver.delegateAddress!,
       driver.delegateAddress!,
-      new BN(1000)
+      inflate15(1000)
     );
   });
 
@@ -60,6 +61,9 @@ describe('resume distribution', () => {
     expect(historyDownloader.history.assignmentEvents.length).toBeGreaterThan(0);
     expect(historyDownloader.history.distributionEvents.length).toEqual(1);
 
+    // sanity that nobody changed the static variable
+    expect(Distribution.granularity).toEqual(bnAddZeroes(1, 15));
+
     // create a new distribution of rewards up to this block
     const distribution = Distribution.getLast(latestEthereumBlock, historyDownloader.history);
     if (distribution == null) throw new Error(`distribution is null`);
@@ -86,7 +90,12 @@ describe('resume distribution', () => {
     expect(events[0].returnValues).toHaveProperty('txIndex', '1');
     expect(events[0].returnValues.amounts).toEqual(
       // does not contain the validator itself since amounts jitter slightly
-      expect.arrayContaining(['12611', '9767', '1993', '598'])
+      expect.arrayContaining([
+        inflate15(18936).toString(),
+        inflate15(14202).toString(),
+        inflate15(11835).toString(),
+        inflate15(2367).toString(),
+      ])
     );
   });
 });

@@ -3,6 +3,7 @@ import { Web3Driver } from '@orbs-network/orbs-ethereum-contracts-v2/release/eth
 import { EthereumContractAddresses } from '../src';
 import Web3 from 'web3';
 import BN from 'bn.js';
+import { bnAddZeroes } from '../src/helpers';
 
 const SCENARIO_MAX_STANDBYS = 3;
 const SCENARIO_MAX_COMMITTEE_SIZE = 3;
@@ -24,9 +25,9 @@ export class TestkitDriver {
       maxCommitteeSize: SCENARIO_MAX_COMMITTEE_SIZE,
     });
     this.ethereumContractAddresses = {
-      Committee: this.orbsV2Driver.committeeGeneral.address,
+      Committee: this.orbsV2Driver.committee.address,
       Delegations: this.orbsV2Driver.delegations.address,
-      StakingRewards: this.orbsV2Driver.stakingRewards.address,
+      Rewards: this.orbsV2Driver.rewards.address,
     };
   }
 
@@ -45,13 +46,12 @@ export class TestkitDriver {
     if (!d) throw new Error(`Call deployOrbsV2Contracts before prepareScenario.`);
 
     // setup rewards
-    const rg = d.rewardsGovernor;
     const annualRate = 12000;
-    const poolAmount = 4000000000;
-    const annualCap = poolAmount;
-    let r = await d.stakingRewards.setAnnualRate(annualRate, annualCap, { from: rg.address });
-    await rg.assignAndApproveOrbs(poolAmount, d.stakingRewards.address);
-    await d.stakingRewards.topUpPool(poolAmount, { from: rg.address });
+    const poolAmount = inflate15(4000000);
+    await d.erc20.assign(d.accounts[0], poolAmount);
+    await d.erc20.approve(d.rewards.address, poolAmount);
+    await d.rewards.setAnnualStakingRewardsRate(annualRate, poolAmount, { from: d.functionalOwner.address });
+    await d.rewards.topUpStakingRewardsPool(poolAmount);
 
     // setup 3 validators (max committee size is 3)
     const v1 = d.newParticipant();
@@ -60,9 +60,9 @@ export class TestkitDriver {
     await v1.registerAsValidator();
     await v2.registerAsValidator();
     await v3.registerAsValidator();
-    await v1.stake(1000000);
-    await v2.stake(2000000);
-    await v3.stake(3000000);
+    await v1.stake(inflate15(1000000));
+    await v2.stake(inflate15(2000000));
+    await v3.stake(inflate15(3000000));
     await v1.notifyReadyForCommittee();
     await v2.notifyReadyForCommittee();
     await v3.notifyReadyForCommittee();
@@ -74,12 +74,12 @@ export class TestkitDriver {
     const d4 = d.newParticipant();
     const d5 = d.newParticipant();
     const d6 = d.newParticipant();
-    await d1.stake(100000);
-    await d2.stake(200000);
-    await d3.stake(300000);
-    await d4.stake(400000);
-    await d5.stake(500000);
-    await d6.stake(600000);
+    await d1.stake(inflate15(100000));
+    await d2.stake(inflate15(200000));
+    await d3.stake(inflate15(300000));
+    await d4.stake(inflate15(400000));
+    await d5.stake(inflate15(500000));
+    await d6.stake(inflate15(600000));
     await d1.delegate(v1);
     await d2.delegate(v1);
     await d3.delegate(v2);
@@ -92,17 +92,17 @@ export class TestkitDriver {
 
     // assign rewards (TODO: this will become automatic)
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS * 4);
-    await d.stakingRewards.assignRewards();
+    await d.rewards.assignRewards();
 
     // setup 4th validator (that will push v1 out of committee)
     const v4 = d.newParticipant();
     await v4.registerAsValidator();
-    await v4.stake(4000000);
+    await v4.stake(inflate15(4000000));
     await v4.notifyReadyForCommittee();
 
     // setup 7th delegator
     const d7 = d.newParticipant();
-    await d7.stake(700000);
+    await d7.stake(inflate15(700000));
     await d7.delegate(v4);
 
     // move some delegators to our delegate (v2)
@@ -111,11 +111,11 @@ export class TestkitDriver {
 
     // assign rewards (TODO: this will become automatic)
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS * 4);
-    await d.stakingRewards.assignRewards();
+    await d.rewards.assignRewards();
   }
 
   async getNewDistributionEvents(fromBlock: number) {
-    const res = await this.orbsV2Driver?.stakingRewards.web3Contract.getPastEvents('StakingRewardsDistributed', {
+    const res = await this.orbsV2Driver?.rewards.web3Contract.getPastEvents('StakingRewardsDistributed', {
       fromBlock: fromBlock,
       toBlock: 'latest',
     });
@@ -132,7 +132,7 @@ export class TestkitDriver {
     to: string,
     amount: BN
   ) {
-    await this.orbsV2Driver?.stakingRewards.distributeOrbsTokenRewards(
+    await this.orbsV2Driver?.rewards.distributeOrbsTokenStakingRewards(
       amount,
       fromBlock,
       toBlock,
@@ -145,9 +145,13 @@ export class TestkitDriver {
   }
 
   async getCurrentRewardBalance(delegateAddress: string): Promise<BN> {
-    const res = await this.orbsV2Driver?.stakingRewards.getRewardBalance(delegateAddress);
+    const res = await this.orbsV2Driver?.rewards.getStakingRewardBalance(delegateAddress);
     return new BN(res!);
   }
+}
+
+export function inflate15(a: number) {
+  return bnAddZeroes(a, 15);
 }
 
 // taken from https://github.com/orbs-network/orbs-ethereum-contracts-v2/blob/master/test/helpers.ts

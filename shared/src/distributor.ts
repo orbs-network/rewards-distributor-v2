@@ -6,7 +6,7 @@ import { EthereumContractAddresses } from '.';
 import { Contract } from 'web3-eth-contract';
 import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/release/compiled-contracts';
 import Web3 from 'web3';
-import { sleep } from './helpers';
+import { sleep, bnAddZeroes } from './helpers';
 
 const DEFAULT_NUM_RECIPIENTS_PER_TX = 10;
 const DEFAULT_NUM_CONFIRMATIONS = 4;
@@ -14,8 +14,13 @@ const DEFAULT_CONFIRMATION_TIMEOUT_SECONDS = 60 * 10;
 const CONFIRMATION_POLL_INTERVAL_SECONDS = 5;
 const GAS_LIMIT_PER_TX = 0x7fffffff; // TODO: improve
 
+// the main external api to distribute rewards
 export class Distribution {
+  static granularity = bnAddZeroes(1, 15); // default distribution/assignment granularity used by the contracts
+
   // returns the last distribution if exists, null if no distribution done yet
+  // since a distribution contains multiple transactions, it may be stopped in the middle without completing it
+  // we must make sure to finish the last one before starting a new one
   static getLast(latestEthereumBlock: number, history: EventHistory): Distribution | null {
     if (latestEthereumBlock > history.lastProcessedBlock) {
       throw new Error(
@@ -54,6 +59,8 @@ export class Distribution {
   }
 
   // starts a new distribution assuming there is none in progress and returns it
+  // the new distribution takes the block range starting from the end of the last distribution
+  // and adding up all the assignments in this block range to calculate a division to distribute
   static startNew(latestEthereumBlock: number, split: Split, history: EventHistory): Distribution {
     let firstBlock = 0;
     const lastBlock = latestEthereumBlock;
@@ -78,26 +85,31 @@ export class Distribution {
   private startScanningFromIndex = 0; // optimization, the index we can start scanning from to find history events
   private web3?: Web3;
   private ethereumContracts?: {
-    StakingRewards: Contract;
+    Rewards: Contract;
   };
 
+  // the ctor is private because instantiating a Distribution should only be done through the static methods above
   private constructor(
     public firstBlock: number,
     public lastBlock: number,
     public split: Split,
     private history: EventHistory
   ) {
-    this.division = Calculator.calcDivisionForBlockPeriod(firstBlock, lastBlock, split, history);
+    // before we start the actual distribution, calculate the division of how much to give each delegator
+    const accurateDivision = Calculator.calcDivisionForBlockPeriod(firstBlock, lastBlock, split, history);
+    // we're not allowed to distribute any number, only specific granularity (thousandth of ORBS)
+    this.division = Calculator.fixDivisionGranularity(
+      accurateDivision,
+      Distribution.granularity,
+      history.delegateAddress
+    );
   }
 
   setEthereumContracts(web3: Web3, ethereumContractAddresses: EthereumContractAddresses) {
     this.web3 = web3;
     // TODO: replace this line with a nicer way to get the abi's
     this.ethereumContracts = {
-      StakingRewards: new web3.eth.Contract(
-        compiledContracts.StakingRewards.abi,
-        ethereumContractAddresses.StakingRewards
-      ),
+      Rewards: new web3.eth.Contract(compiledContracts.Rewards.abi, ethereumContractAddresses.Rewards),
     };
   }
 
@@ -236,8 +248,8 @@ export class Distribution {
         if (!this.ethereumContracts) {
           return reject(new Error(`Ethereum contracts are undefined, did you call setEthereumContracts?`));
         }
-        const tx = this.ethereumContracts.StakingRewards.methods
-          .distributeOrbsTokenRewards(
+        const tx = this.ethereumContracts.Rewards.methods
+          .distributeOrbsTokenStakingRewards(
             txData.totalAmount.toString(), // uint256 totalAmount
             this.firstBlock, // uint256 fromBlock
             this.lastBlock, // uint256 toBlock
