@@ -11,5 +11,6 @@
 !.travis.yml
 !LICENSE
 !.npmignore
+!.eslintignore
 !__tests__/
 !__tests__/**/*

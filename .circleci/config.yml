@@ -3,7 +3,7 @@ orbs:
   node: circleci/node@1.1.6
   docker: circleci/docker@0.5.19
 jobs:
-  build-and-test:
+  test-shared:
     machine: true
     steps:
       - checkout
@@ -14,27 +14,39 @@ jobs:
       - run: npm --version
       - run: docker --version
       - run: env
-      - node/with-cache:
-          app-dir: shared
-          steps:
-            - run: npm install
-            - run: npm install --save-dev jest-junit
+      - run: 
+          working_directory: ./shared
+          command: npm install
+      - run: 
+          working_directory: ./shared
+          command: npm install --save-dev jest-junit
       - run:
           name: spinning up ganache
-          command: cd shared && npm run start-ganache
+          working_directory: ./shared
+          command: npm run start-ganache
           background: true
-      - run: cd shared && mkdir -p _out/unit _out/e2e
-      - node/with-cache:
-          app-dir: shared
-          steps:
-            - run: npm test -- --ci --runInBand --reporters=default --reporters=jest-junit > _out/unit/test.xml
-            - run: npm run test:e2e -- --ci --runInBand --reporters=default --reporters=jest-junit > _out/e2e/test.xml
+      - run: 
+          working_directory: ./shared
+          command: mkdir -p _out/unit _out/e2e
+      - run: 
+          working_directory: ./shared
+          command: npm run test -- --ci --runInBand --reporters=default --reporters=jest-junit
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./_out
+            JEST_JUNIT_OUTPUT_NAME: junit-test.xml
+      - run:
+          working_directory: ./shared
+          command: npm run test:e2e -- --ci --runInBand --reporters=default --reporters=jest-junit
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./_out
+            JEST_JUNIT_OUTPUT_NAME: junit-e2e.xml
       - store_test_results:
-          path: _out
+          path: ./shared/_out
       - store_artifacts:
-          path: _out    
+          path: ./shared/_out    
+
   
 workflows:
   build-and-test:
     jobs:
-      - build-and-test
+      - test-shared
