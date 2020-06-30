@@ -1,0 +1,76 @@
+{
+  "name": "@orbs-network/rewards-service",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Node service for a validator node that distibutes rewards automatically",
+  "author": "Tal Kol <talkol@gmail.com>",
+  "license": "MIT",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "!dist/**/*.test.js"
+  ],
+  "engines": {
+    "node": ">=12.13.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "lint": "eslint . --ext .ts,.tsx -f codeframe",
+    "pretest": "npm run typecheck && npm run lint",
+    "clean": "rimraf ./dist/",
+    "prebuild": "npm run clean",
+    "build": "tsc --skipLibCheck -p ./tsconfig.prod.json && docker build -t local/rewards-service .",
+    "build:quick": "tsc --skipLibCheck -p ./tsconfig.prod.json",
+    "test": "jest",
+    "test:quick": "jest",
+    "test:e2e": "jest --config ./e2e/jest.json --forceExit --runInBand",
+    "prepack": "npm run build",
+    "prettify": "npx prettier \"src/**/*.ts\" --write && npx prettier \"e2e/**/*.ts\" --write",
+    "start": "node --async-stack-traces ./dist/src/main.js"
+  },
+  "devDependencies": {
+    "@types/child-process-promise": "^2.2.1",
+    "@types/jest": "^24.9.1",
+    "@types/lodash": "^4.14.149",
+    "@types/mock-fs": "^4.10.0",
+    "@types/node": "^12.12.47",
+    "@types/yargs": "^15.0.4",
+    "@typescript-eslint/eslint-plugin": "^2.25.0",
+    "@typescript-eslint/parser": "^2.25.0",
+    "child-process-promise": "^2.2.1",
+    "docker-compose-mocha": "^1.2.0",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.10.1",
+    "jest": "^26.0.1",
+    "mock-fs": "^4.11.0",
+    "rimraf": "^3.0.2",
+    "truffle-hdwallet-provider": "1.0.3",
+    "ts-jest": "^26.0.0",
+    "ts-retry-promise": "^0.2.0",
+    "typescript": "^3.7.5"
+  },
+  "dependencies": {
+    "lodash": "^4.17.15",
+    "orbs-signer-client": "^1.0.0",
+    "rewards-v2": "file:../shared",
+    "web3": "1.2.6",
+    "yargs": "^15.3.1"
+  },
+  "jest": {
+    "rootDir": "src",
+    "transform": {
+      ".(ts|tsx)": "ts-jest"
+    },
+    "setupFilesAfterEnv": [
+      "../jest.console.js"
+    ],
+    "testEnvironment": "node",
+    "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx)$",
+    "moduleFileExtensions": [
+      "ts",
+      "js",
+      "json"
+    ]
+  }
+}

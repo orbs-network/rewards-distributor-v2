@@ -17,8 +17,9 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "typeRoots": [
+      "custom_typings", 
       "node_modules/@types"
-    ]
+    ],
   },
   "include": [
     "src", "e2e"

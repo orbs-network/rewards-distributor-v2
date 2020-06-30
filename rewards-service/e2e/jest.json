@@ -1,0 +1,12 @@
+{
+  "verbose": true,
+  "extraGlobals": ["Math"],
+  "rootDir": ".",
+  "transform": {
+    ".(ts|tsx)": "ts-jest"
+  },
+  "setupFilesAfterEnv": ["../jest.console.js"],
+  "testEnvironment": "node",
+  "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx)$",
+  "moduleFileExtensions": ["ts", "js", "json"]
+}

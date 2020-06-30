@@ -111,3 +111,53 @@ Web-based UI for manual distribution and analysis of rewards
 &nbsp;
 
 ## Project: rewards-service
+
+Node.js service for a validator node that distibutes rewards automatically
+
+### Install dev environment
+
+* Prerequisites:
+
+  * Docker (installed and service running)
+  * Node.js (version > 8.1) 
+  * npm (version > 5.2)
+  * Install and build shared lib:
+
+    ```
+    cd shared
+    npm install
+    npm run build
+    cd ..
+    ```
+
+* Install project:
+
+  ```
+  cd rewards-service
+  npm install
+  ```
+
+* Run unit tests:
+
+  ```
+  npm test
+  ```
+
+* Run end-to-end tests (on docker):
+
+  ```
+  npm run build
+  npm run test:e2e
+  ```
+
+### Build and deploy
+
+* Bundle files for production:
+
+  ```
+  npm run build
+  ```
+
+&nbsp;
+
+## Project: rewards-service

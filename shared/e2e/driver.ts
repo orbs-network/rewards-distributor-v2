@@ -4,6 +4,7 @@ import { EthereumContractAddresses } from '../src';
 import Web3 from 'web3';
 import BN from 'bn.js';
 import { bnAddZeroes } from '../src/helpers';
+import { DriverOptions } from '@orbs-network/orbs-ethereum-contracts-v2/release/test/driver';
 
 const SCENARIO_MAX_STANDBYS = 3;
 const SCENARIO_MAX_COMMITTEE_SIZE = 3;
@@ -19,11 +20,13 @@ export class TestkitDriver {
     this.web3 = new Web3('http://localhost:7545');
   }
 
-  async deployOrbsV2Contracts() {
-    this.orbsV2Driver = await OrbsV2Driver.new({
+  async deployOrbsV2Contracts(customWeb3Provider?: () => Web3) {
+    const options: Partial<DriverOptions> = {
       maxStandbys: SCENARIO_MAX_STANDBYS,
       maxCommitteeSize: SCENARIO_MAX_COMMITTEE_SIZE,
-    });
+    };
+    if (customWeb3Provider) options.web3Provider = customWeb3Provider;
+    this.orbsV2Driver = await OrbsV2Driver.new(options);
     this.ethereumContractAddresses = {
       Committee: this.orbsV2Driver.committee.address,
       Delegations: this.orbsV2Driver.delegations.address,

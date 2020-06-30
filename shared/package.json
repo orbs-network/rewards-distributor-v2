@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Wrapper project for shared code",
   "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "scripts": {
     "typecheck": "tsc --noEmit --skipLibCheck",
     "lint": "eslint . --ext .js,.ts,.tsx -f codeframe",
