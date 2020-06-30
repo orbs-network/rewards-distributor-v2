@@ -14,10 +14,10 @@ jobs:
       - run: npm --version
       - run: docker --version
       - run: env
-      - run: 
+      - run:
           working_directory: ./shared
           command: npm install
-      - run: 
+      - run:
           working_directory: ./shared
           command: npm install --save-dev jest-junit
       - run:
@@ -25,28 +25,70 @@ jobs:
           working_directory: ./shared
           command: npm run start-ganache
           background: true
-      - run: 
+      - run:
           working_directory: ./shared
           command: mkdir -p _out/unit _out/e2e
-      - run: 
+      - run:
           working_directory: ./shared
           command: npm run test -- --ci --runInBand --reporters=default --reporters=jest-junit
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./_out
             JEST_JUNIT_OUTPUT_NAME: junit-test.xml
+            JEST_JUNIT_INCLUDE_CONSOLE_OUTPUT: true
       - run:
           working_directory: ./shared
           command: npm run test:e2e -- --ci --runInBand --reporters=default --reporters=jest-junit
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./_out
             JEST_JUNIT_OUTPUT_NAME: junit-e2e.xml
+            JEST_JUNIT_INCLUDE_CONSOLE_OUTPUT: true
       - store_test_results:
           path: ./shared/_out
       - store_artifacts:
-          path: ./shared/_out    
-
-  
+          path: ./shared/_out
+  test-rewards-service:
+    machine: true
+    steps:
+      - checkout
+      - node/install:
+          node-version: '12.13.0'
+      - docker/install-docker
+      - run: node --version
+      - run: npm --version
+      - run: docker --version
+      - run: env
+      - run:
+          working_directory: ./shared
+          command: npm install && npm run build
+      - run:
+          working_directory: ./rewards-service
+          command: npm install && npm run build
+      - run:
+          working_directory: ./rewards-service
+          command: npm install --save-dev jest-junit
+      - run:
+          working_directory: ./rewards-service
+          command: mkdir -p _out/unit _out/e2e
+      - run:
+          working_directory: ./rewards-service
+          command: npm run test -- --ci --runInBand --reporters=default --reporters=jest-junit
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./_out
+            JEST_JUNIT_OUTPUT_NAME: junit-test.xml
+            JEST_JUNIT_INCLUDE_CONSOLE_OUTPUT: true
+      - run:
+          working_directory: ./rewards-service
+          command: npm run test:e2e -- --ci --runInBand --reporters=default --reporters=jest-junit
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./_out
+            JEST_JUNIT_OUTPUT_NAME: junit-e2e.xml
+            JEST_JUNIT_INCLUDE_CONSOLE_OUTPUT: true
+      - store_test_results:
+          path: ./rewards-service/_out
+      - store_artifacts:
+          path: ./rewards-service/_out
 workflows:
   build-and-test:
     jobs:
       - test-shared
+      - test-rewards-service
