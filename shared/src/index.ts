@@ -1,5 +1,5 @@
 // the main external api to populate the data model (synchronize over all event history)
-export { HistoryDownloader } from './history';
+export { HistoryDownloader } from './history-downloader';
 
 // the main external api to distribute rewards
 export { Distribution } from './distributor';

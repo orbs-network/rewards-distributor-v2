@@ -1,55 +1,12 @@
 import _ from 'lodash';
 import BN from 'bn.js';
-import { EventData, Contract } from 'web3-eth-contract';
+import { EventData } from 'web3-eth-contract';
 import pLimit from 'p-limit';
 import Web3 from 'web3';
-import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/release/compiled-contracts';
 import { bnZero, bnDivideAsNumber } from './helpers';
 import { EthereumContractAddresses } from '.';
-
-// internal abstracted model to hold delegation events
-export interface DelegationChangeEvent {
-  block: number;
-  delegatorAddress: string;
-  newDelegatedStake: BN; // total stake of this delegator that is staked towards this delegate
-}
-
-// internal abstracted model to hold committee changes
-export interface CommitteeChangeEvent {
-  block: number;
-  newRelativeWeightInCommittee: number; // [0,1] if delegate has half the effective stake of the committee then 0.5, if not in committee then 0
-}
-
-// internal abstracted model to hold assignments events
-export interface AssignmentEvent {
-  block: number;
-  amount: BN; // incoming payment to the delegate by the protocol for distribution
-}
-
-// internal abstracted model to hold distribution events
-export interface DistributionEvent {
-  block: number;
-  recipientAddresses: string[];
-  amounts: BN[]; // the amount distributed to the recipient delegator by the delegate in this distribution
-  batchFirstBlock: number; // this distribution is part of a batch - where does the batch start
-  batchLastBlock: number; // this distribution is part of a batch - where does the batch end
-  batchSplit: Split; // the split used for this batch
-  batchTxIndex: number; // the batch has multiple distribution transactions - which one is this
-}
-
-export interface Split {
-  fractionForDelegators: number; // eg. 0.70 to give delegators 70% and keep 30%
-}
-
-// the main data model
-export class EventHistory {
-  public lastProcessedBlock = 0;
-  public delegationChangeEvents: DelegationChangeEvent[] = [];
-  public committeeChangeEvents: CommitteeChangeEvent[] = [];
-  public assignmentEvents: AssignmentEvent[] = [];
-  public distributionEvents: DistributionEvent[] = [];
-  constructor(public delegateAddress: string, public startingBlock: number) {}
-}
+import { EthereumAdapter } from './ethereum';
+import { EventHistory } from './model';
 
 const DEFAULT_CONCURRENCY = 5;
 
@@ -57,23 +14,14 @@ const DEFAULT_CONCURRENCY = 5;
 export class HistoryDownloader {
   public history: EventHistory;
   public extraHistoryPerDelegate: { [delegateAddress: string]: EventHistory } = {}; // optional for additional analytics
-  private ethereumContracts?: {
-    Committee: Contract;
-    Delegations: Contract;
-    Rewards: Contract;
-  };
+  public ethereum = new EthereumAdapter();
 
   constructor(delegateAddress: string, startingBlock: number, private storeExtraHistoryPerDelegate = false) {
     this.history = new EventHistory(delegateAddress, startingBlock);
   }
 
   setEthereumContracts(web3: Web3, ethereumContractAddresses: EthereumContractAddresses) {
-    // TODO: replace this line with a nicer way to get the abi's
-    this.ethereumContracts = {
-      Committee: new web3.eth.Contract(compiledContracts.Committee.abi, ethereumContractAddresses.Committee),
-      Delegations: new web3.eth.Contract(compiledContracts.Delegations.abi, ethereumContractAddresses.Delegations),
-      Rewards: new web3.eth.Contract(compiledContracts.Rewards.abi, ethereumContractAddresses.Rewards),
-    };
+    this.ethereum.setContracts(web3, ethereumContractAddresses);
   }
 
   // returns the last processed block number in the new batch
@@ -92,13 +40,13 @@ export class HistoryDownloader {
     }
 
     const requests = [];
-    requests[0] = limit(() => this._web3ReadEvents('Committee', 'CommitteeChanged', fromBlock, toBlock));
-    requests[1] = limit(() => this._web3ReadEvents('Delegations', 'DelegatedStakeChanged', fromBlock, toBlock));
-    requests[2] = limit(() => this._web3ReadEvents('Rewards', 'StakingRewardsAssigned', fromBlock, toBlock));
-    requests[3] = limit(() => this._web3ReadEvents('Rewards', 'StakingRewardsDistributed', fromBlock, toBlock));
+    requests[0] = limit(() => this.ethereum.readEvents('Committee', 'CommitteeSnapshot', fromBlock, toBlock));
+    requests[1] = limit(() => this.ethereum.readEvents('Delegations', 'DelegatedStakeChanged', fromBlock, toBlock));
+    requests[2] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsAssigned', fromBlock, toBlock));
+    requests[3] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsDistributed', fromBlock, toBlock));
 
     const results = await Promise.all(requests);
-    const d1 = HistoryDownloader._parseCommitteeChangedEvents(results[0], this.history);
+    const d1 = HistoryDownloader._parseCommitteeSnapshotEvents(results[0], this.history);
     const d2 = HistoryDownloader._parseDelegationChangedEvents(results[1], this.history);
     const d3 = HistoryDownloader._parseRewardsAssignedEvents(results[2], this.history);
     const d4 = HistoryDownloader._parseRewardsDistributedEvents(results[3], this.history);
@@ -119,7 +67,7 @@ export class HistoryDownloader {
         this.extraHistoryPerDelegate[delegateAddress] = new EventHistory(delegateAddress, this.history.startingBlock);
       }
       const delegateHistory = this.extraHistoryPerDelegate[delegateAddress];
-      HistoryDownloader._parseCommitteeChangedEvents(results[0], delegateHistory);
+      HistoryDownloader._parseCommitteeSnapshotEvents(results[0], delegateHistory);
       HistoryDownloader._parseDelegationChangedEvents(results[1], delegateHistory);
       HistoryDownloader._parseRewardsAssignedEvents(results[2], delegateHistory);
       HistoryDownloader._parseRewardsDistributedEvents(results[3], delegateHistory);
@@ -129,26 +77,8 @@ export class HistoryDownloader {
     }
   }
 
-  // TODO: add support for filters when ready (to optimize)
-  async _web3ReadEvents(
-    contract: 'Committee' | 'Delegations' | 'Rewards',
-    event: string,
-    fromBlock: number,
-    toBlock: number
-  ): Promise<EventData[]> {
-    if (!this.ethereumContracts) {
-      throw new Error(`Ethereum contracts are undefined, did you call setEthereumContracts?`);
-    }
-    const ethereumContract = this.ethereumContracts[contract];
-    const res = await ethereumContract.getPastEvents(event, {
-      fromBlock: fromBlock,
-      toBlock: toBlock,
-    });
-    return res;
-  }
-
   // appends events to history, returns all delegates it encountered
-  static _parseCommitteeChangedEvents(events: EventData[], history: EventHistory): string[] {
+  static _parseCommitteeSnapshotEvents(events: EventData[], history: EventHistory): string[] {
     const allDelegates: { [delegateAddress: string]: boolean } = {};
     for (const event of events) {
       // for debug: console.log(event.blockNumber, event.returnValues);
@@ -166,7 +96,7 @@ export class HistoryDownloader {
       if (totalWeight.gt(bnZero)) {
         newRelativeWeightInCommittee = bnDivideAsNumber(delegateWeight, totalWeight);
       }
-      history.committeeChangeEvents.push({
+      history.committeeSnapshotEvents.push({
         block: event.blockNumber,
         newRelativeWeightInCommittee: newRelativeWeightInCommittee,
       });
@@ -220,7 +150,7 @@ export class HistoryDownloader {
       const amounts = [];
       for (let i = 0; i < event.returnValues.to.length; i++) {
         recipientAddresses.push(event.returnValues.to[i]);
-        amounts.push(new BN(event.returnValues.amounts));
+        amounts.push(new BN(event.returnValues.amounts[i]));
       }
       history.distributionEvents.push({
         block: event.blockNumber,
@@ -282,27 +212,4 @@ export class HistoryDownloader {
       throw e;
     }
   }
-}
-
-// efficient binary search, returns -1 if not found
-export function findLowestClosestIndexToBlock(block: number, events: { block: number }[]): number {
-  if (events.length == 0) {
-    return -1;
-  }
-  let left = 0;
-  let right = events.length - 1;
-  while (events[left].block < block) {
-    if (events[right].block < block) {
-      return -1;
-    }
-    let middle = Math.floor((left + right) / 2);
-    if (events[middle].block >= block) {
-      if (middle == right) middle--;
-      right = middle;
-    } else {
-      if (middle == left) middle++;
-      left = middle;
-    }
-  }
-  return left;
 }

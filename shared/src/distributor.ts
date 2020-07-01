@@ -1,27 +1,45 @@
 import _ from 'lodash';
-import { EventHistory, Split } from './history';
-import { Division, Calculator } from './calculator';
+import * as Logger from './logger';
+import { EventHistory, Split, Division } from './model';
+import { Calculator } from './calculator';
 import BN from 'bn.js';
 import { EthereumContractAddresses } from '.';
-import { Contract } from 'web3-eth-contract';
-import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/release/compiled-contracts';
 import Web3 from 'web3';
-import { sleep, bnAddZeroes } from './helpers';
+import { bnAddZeroes } from './helpers';
+import { EthereumAdapter, TxProgressNotification } from './ethereum';
 
-const DEFAULT_NUM_RECIPIENTS_PER_TX = 10;
+const DEFAULT_NUM_RECIPIENTS_PER_TX = 10; // without the delegate
 const DEFAULT_NUM_CONFIRMATIONS = 4;
 const DEFAULT_CONFIRMATION_TIMEOUT_SECONDS = 60 * 10;
-const CONFIRMATION_POLL_INTERVAL_SECONDS = 5;
-const GAS_LIMIT_PER_TX = 0x7fffffff; // TODO: improve
 
 // the main external api to distribute rewards
 export class Distribution {
+  public division: Division; // the division (how much every delegator is owed) that this Distribution distributes
   static granularity = bnAddZeroes(1, 15); // default distribution/assignment granularity used by the contracts
+  public ethereum = new EthereumAdapter();
+  private startScanningFromIndex = 0; // optimization, the index we can start scanning from to find history events
+
+  // the ctor is private because instantiating a Distribution should only be done through the two static methods below
+  private constructor(
+    public firstBlock: number,
+    public lastBlock: number,
+    public split: Split,
+    private history: EventHistory
+  ) {
+    // before we start the actual distribution, calculate the division of how much to give each delegator
+    const accurateDivision = Calculator.calcDivisionForBlockPeriod(firstBlock, lastBlock, split, history);
+    // we're not allowed to distribute any number, only specific granularity (thousandth of ORBS)
+    this.division = Calculator.fixDivisionGranularity(accurateDivision, Distribution.granularity);
+  }
+
+  setEthereumContracts(web3: Web3, ethereumContractAddresses: EthereumContractAddresses) {
+    this.ethereum.setContracts(web3, ethereumContractAddresses);
+  }
 
   // returns the last distribution if exists, null if no distribution done yet
   // since a distribution contains multiple transactions, it may be stopped in the middle without completing it
   // we must make sure to finish the last one before starting a new one
-  static getLast(latestEthereumBlock: number, history: EventHistory): Distribution | null {
+  static getLastDistribution(latestEthereumBlock: number, history: EventHistory): Distribution | null {
     if (latestEthereumBlock > history.lastProcessedBlock) {
       throw new Error(
         `History is not fully synchronized, current block ${latestEthereumBlock} last processed ${history.lastProcessedBlock}.`
@@ -47,6 +65,10 @@ export class Distribution {
       index--;
     }
 
+    Logger.log(
+      `Found existing distribution: ${latestDistribution.batchFirstBlock}-${latestDistribution.batchLastBlock} (${latestDistribution.batchSplit.fractionForDelegators}).`
+    );
+
     // return the result
     const res = new Distribution(
       latestDistribution.batchFirstBlock,
@@ -54,19 +76,19 @@ export class Distribution {
       latestDistribution.batchSplit,
       history
     );
-    res.startScanningFromIndex = res._searchForEarliestIndex();
+    res.startScanningFromIndex = res._searchForEarliestEventIndex();
     return res;
   }
 
   // starts a new distribution assuming there is none in progress and returns it
   // the new distribution takes the block range starting from the end of the last distribution
   // and adding up all the assignments in this block range to calculate a division to distribute
-  static startNew(latestEthereumBlock: number, split: Split, history: EventHistory): Distribution {
+  static startNewDistribution(latestEthereumBlock: number, split: Split, history: EventHistory): Distribution {
     let firstBlock = 0;
     const lastBlock = latestEthereumBlock;
-    const lastDistribution = Distribution.getLast(latestEthereumBlock, history);
+    const lastDistribution = Distribution.getLastDistribution(latestEthereumBlock, history);
     if (lastDistribution != null) {
-      if (!lastDistribution.isComplete()) {
+      if (!lastDistribution.isDistributionComplete()) {
         throw new Error(`There already is a distribution in progress.`);
       }
       firstBlock = lastDistribution.lastBlock + 1;
@@ -75,46 +97,17 @@ export class Distribution {
       throw new Error(`When starting new distribution first block ${firstBlock} is higher than current ${lastBlock}.`);
     }
 
+    Logger.log(`Starting new distribution: ${firstBlock}-${lastBlock} (${split.fractionForDelegators}).`);
+
     // return the result
     const res = new Distribution(firstBlock, lastBlock, split, history);
     res.startScanningFromIndex = history.distributionEvents.length;
     return res;
   }
 
-  public division: Division;
-  private startScanningFromIndex = 0; // optimization, the index we can start scanning from to find history events
-  private web3?: Web3;
-  private ethereumContracts?: {
-    Rewards: Contract;
-  };
-
-  // the ctor is private because instantiating a Distribution should only be done through the static methods above
-  private constructor(
-    public firstBlock: number,
-    public lastBlock: number,
-    public split: Split,
-    private history: EventHistory
-  ) {
-    // before we start the actual distribution, calculate the division of how much to give each delegator
-    const accurateDivision = Calculator.calcDivisionForBlockPeriod(firstBlock, lastBlock, split, history);
-    // we're not allowed to distribute any number, only specific granularity (thousandth of ORBS)
-    this.division = Calculator.fixDivisionGranularity(
-      accurateDivision,
-      Distribution.granularity,
-      history.delegateAddress
-    );
-  }
-
-  setEthereumContracts(web3: Web3, ethereumContractAddresses: EthereumContractAddresses) {
-    this.web3 = web3;
-    // TODO: replace this line with a nicer way to get the abi's
-    this.ethereumContracts = {
-      Rewards: new web3.eth.Contract(compiledContracts.Rewards.abi, ethereumContractAddresses.Rewards),
-    };
-  }
-
-  private _searchForEarliestIndex(): number {
-    // find the block where tx0 is
+  // returns earliest index of history.distributionEvents that is relevant for this Distribution
+  private _searchForEarliestEventIndex(): number {
+    // find the block where tx0 of this distribution is
     let index = this.history.distributionEvents.length - 1;
     let earliestBlock = -1;
     while (index >= 0 && earliestBlock == -1) {
@@ -146,27 +139,40 @@ export class Distribution {
     return res;
   }
 
-  // returns all recipients that were not paid yet
-  private _findRemainingRecipients(): [{ [recipientAddress: string]: BN }, number] {
-    const resAmounts = _.clone(this.division.amounts);
+  // returns all delegators (without the delegate) that were not paid yet
+  private _findRemainderToDistribute(): DistributionRemainder {
+    const resRemainingDelegators = _.clone(this.division.amountsWithoutDelegate);
+    const resRemainingAmountForDelegate = this.division.amountForDelegate.clone();
     let resMaxTxIndex = -1;
     for (let index = this.startScanningFromIndex; index < this.history.distributionEvents.length; index++) {
       const event = this.history.distributionEvents[index];
       if (event.batchFirstBlock == this.firstBlock && event.batchLastBlock == this.lastBlock) {
-        for (let j = 0; j < event.recipientAddresses.length; j++) {
-          delete resAmounts[event.recipientAddresses[j]];
+        if (event.recipientAddresses[0] != this.history.delegateAddress) {
+          throw new Error(`Corrupt Distribution event ${JSON.stringify(event)} where delegate is not first.`);
+        }
+        resRemainingAmountForDelegate.isub(event.amounts[0]);
+        if (resRemainingAmountForDelegate.isNeg()) {
+          throw new Error(`Remaining amount for delegate is negative after event ${JSON.stringify(event)}.`);
+        }
+        for (let j = 1; j < event.recipientAddresses.length; j++) {
+          delete resRemainingDelegators[event.recipientAddresses[j]];
         }
         if (event.batchTxIndex > resMaxTxIndex) {
           resMaxTxIndex = event.batchTxIndex;
         }
       }
     }
-    return [resAmounts, resMaxTxIndex];
+
+    return {
+      remainingDelegators: resRemainingDelegators,
+      remainingAmountForDelegate: resRemainingAmountForDelegate,
+      maxTxIndex: resMaxTxIndex,
+    };
   }
 
-  isComplete(): boolean {
-    const [remaining] = this._findRemainingRecipients();
-    return Object.keys(remaining).length == 0;
+  isDistributionComplete(): boolean {
+    const remainder = this._findRemainderToDistribute();
+    return Object.keys(remainder.remainingDelegators).length == 0 && remainder.remainingAmountForDelegate.isZero();
   }
 
   async sendTransactionBatch(
@@ -188,35 +194,77 @@ export class Distribution {
       confirmationTimeoutSeconds = DEFAULT_CONFIRMATION_TIMEOUT_SECONDS;
     }
 
-    const [remaining, maxTxIndex] = this._findRemainingRecipients();
-    const allSortedRemainingRecipients = _.sortBy(Object.keys(remaining));
-    const allSortedRemainingAmounts = _.map(allSortedRemainingRecipients, (r) => remaining[r]);
-    const nextTxIndex = maxTxIndex + 1;
+    // get the remainder that is left to distribute
+    const remainder = this._findRemainderToDistribute();
+    const sortedRemainingDelegators = _.sortBy(Object.keys(remainder.remainingDelegators));
+    const sortedRemainingDelegatorsAmounts = _.map(sortedRemainingDelegators, (r) => remainder.remainingDelegators[r]);
+    const amountLeftSoFarForDelegate = remainder.remainingAmountForDelegate.clone();
+    let nextTxIndex = remainder.maxTxIndex + 1; // will be zero for the first (-1+1)
 
-    if (allSortedRemainingRecipients.length == 0) {
+    // make sure we have anything to send
+    if (sortedRemainingDelegators.length == 0 && amountLeftSoFarForDelegate.isZero()) {
       return { isComplete: true, txHashes: [] };
     }
 
+    Logger.log(`About to send batch based on remainder:\n${JSON.stringify(remainder, null, 2)}`);
+
     // prepare batch
     const batch = [];
-    const chunkedRecipientAddresses = _.chunk(allSortedRemainingRecipients, numRecipientsPerTx);
-    const chunkedAmounts = _.chunk(allSortedRemainingAmounts, numRecipientsPerTx);
-    for (let i = 0; i < chunkedRecipientAddresses.length; i++) {
-      const totalAmount = new BN(0);
-      for (const amount of chunkedAmounts[i]) {
-        totalAmount.iadd(amount);
+    const totalRemainderAmountForDelegators = new BN(0);
+    for (const amount of sortedRemainingDelegatorsAmounts) totalRemainderAmountForDelegators.iadd(amount);
+
+    // add delegators in groups
+    if (!totalRemainderAmountForDelegators.isZero()) {
+      const chunkedDelegatorsAddresses = _.chunk(sortedRemainingDelegators, numRecipientsPerTx);
+      const chunkedDelegatorsAmounts = _.chunk(sortedRemainingDelegatorsAmounts, numRecipientsPerTx);
+      for (let i = 0; i < chunkedDelegatorsAddresses.length; i++) {
+        const totalAmountInTx = new BN(0);
+        for (const amount of chunkedDelegatorsAmounts[i]) totalAmountInTx.iadd(amount);
+        // the delegate must get some amount in every tx
+        const amountInTxForDelegate =
+          i == chunkedDelegatorsAddresses.length - 1 // on the last tx
+            ? amountLeftSoFarForDelegate.clone() // get everything that's left
+            : Calculator.splitAmountInProportionWithGranularity(
+                remainder.remainingAmountForDelegate,
+                totalAmountInTx,
+                totalRemainderAmountForDelegators,
+                Distribution.granularity
+              );
+        // add the tx to the batch
+        batch.push({
+          recipientAddresses: [this.history.delegateAddress, ...chunkedDelegatorsAddresses[i]],
+          amounts: [amountInTxForDelegate, ...chunkedDelegatorsAmounts[i]],
+          totalAmount: totalAmountInTx.add(amountInTxForDelegate),
+          txIndex: nextTxIndex,
+        });
+        nextTxIndex++;
+        amountLeftSoFarForDelegate.isub(amountInTxForDelegate);
       }
+    }
+
+    // handle edge cases like zero remaining delegators
+    if (!amountLeftSoFarForDelegate.isZero()) {
       batch.push({
-        recipientAddresses: chunkedRecipientAddresses[i],
-        amounts: chunkedAmounts[i],
-        totalAmount: totalAmount,
-        txIndex: nextTxIndex + i,
+        recipientAddresses: [this.history.delegateAddress],
+        amounts: [amountLeftSoFarForDelegate],
+        totalAmount: amountLeftSoFarForDelegate,
+        txIndex: nextTxIndex,
       });
     }
 
+    Logger.log(
+      `About to send batch: ${this.firstBlock}-${this.lastBlock} (${
+        this.split.fractionForDelegators
+      }):\n${JSON.stringify(batch, null, 2)}`
+    );
+
     // send the batch with web3
-    const txHashes = await this._web3SendTransactionBatch(
+    const txHashes = await this.ethereum.sendRewardsTransactionBatch(
       batch,
+      this.firstBlock,
+      this.lastBlock,
+      this.split.fractionForDelegators,
+      this.history.delegateAddress,
       numConfirmations,
       confirmationTimeoutSeconds,
       progressCallback
@@ -224,105 +272,10 @@ export class Distribution {
     const isComplete = numConfirmations > 0 && txHashes.length == batch.length;
     return { isComplete, txHashes };
   }
-
-  // returns txHashes, but only after numConfirmations is reached
-  async _web3SendTransactionBatch(
-    batch: {
-      recipientAddresses: string[];
-      amounts: BN[];
-      totalAmount: BN;
-      txIndex: number;
-    }[],
-    numConfirmations: number,
-    confirmationTimeoutSeconds: number,
-    progressCallback?: TxProgressNotification
-  ): Promise<string[]> {
-    if (!this.web3 || !this.ethereumContracts) {
-      throw new Error(`Ethereum contracts are undefined, did you call setEthereumContracts?`);
-    }
-
-    // send all transactions
-    const request = new this.web3.BatchRequest();
-    const promises: Promise<string>[] = _.map(batch, (txData) => {
-      return new Promise((resolve, reject) => {
-        if (!this.ethereumContracts) {
-          return reject(new Error(`Ethereum contracts are undefined, did you call setEthereumContracts?`));
-        }
-        const tx = this.ethereumContracts.Rewards.methods
-          .distributeOrbsTokenStakingRewards(
-            txData.totalAmount.toString(), // uint256 totalAmount
-            this.firstBlock, // uint256 fromBlock
-            this.lastBlock, // uint256 toBlock
-            Math.round(this.split.fractionForDelegators * 100 * 1000), // uint split
-            txData.txIndex, // uint txIndex
-            txData.recipientAddresses, // address[] calldata to
-            _.map(txData.amounts, (bn) => bn.toString()) // uint256[] calldata amounts
-          )
-          .send.request(
-            {
-              from: this.history.delegateAddress,
-              gas: GAS_LIMIT_PER_TX,
-            },
-            (error: Error, txHash: string) => {
-              if (error) reject(error);
-              else resolve(txHash);
-            }
-          );
-        request.add(tx);
-      });
-    });
-    request.execute();
-    const txHashes = await Promise.all(promises);
-    if (numConfirmations == 0) return txHashes;
-
-    // check for confirmations
-    const lastTxHash = txHashes[txHashes.length - 1];
-    const confirmed = await this._web3WaitForConfirmation(
-      lastTxHash,
-      numConfirmations,
-      confirmationTimeoutSeconds,
-      progressCallback
-    );
-
-    if (confirmed) return txHashes;
-    throw new Error(`Did not receive ${numConfirmations} confirmations before timeout ${confirmationTimeoutSeconds}.`);
-  }
-
-  // returns true if confirmations arrived before timeout, false otherwise
-  async _web3WaitForConfirmation(
-    txHash: string,
-    numConfirmations: number,
-    confirmationTimeoutSeconds: number,
-    progressCallback?: TxProgressNotification
-  ): Promise<boolean> {
-    if (!this.web3) {
-      throw new Error(`Ethereum contracts are undefined, did you call setEthereumContracts?`);
-    }
-
-    let receipt = null;
-    const startTime = new Date().getTime();
-    while (new Date().getTime() - startTime < confirmationTimeoutSeconds * 1000) {
-      await sleep(CONFIRMATION_POLL_INTERVAL_SECONDS * 1000);
-      if (receipt == null) {
-        try {
-          receipt = await this.web3.eth.getTransactionReceipt(txHash);
-        } catch (e) {
-          // do nothing
-        }
-      }
-      if (receipt != null) {
-        const ethereumBlockNum = await this.web3.eth.getBlockNumber();
-        const confirmations = ethereumBlockNum - receipt.blockNumber + 1;
-        if (progressCallback) {
-          progressCallback(Math.min(confirmations / numConfirmations, 1), confirmations);
-        }
-        if (confirmations >= numConfirmations) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
 }
 
-export type TxProgressNotification = (progress: number, confirmations: number) => void;
+interface DistributionRemainder {
+  remainingDelegators: { [recipientAddress: string]: BN };
+  remainingAmountForDelegate: BN;
+  maxTxIndex: number; // -1 if none found
+}

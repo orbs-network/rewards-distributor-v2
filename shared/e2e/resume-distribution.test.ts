@@ -1,6 +1,5 @@
 import { TestkitDriver, log, inflate15 } from './driver';
 import { HistoryDownloader, Distribution } from '../src';
-import BN from 'bn.js';
 import { bnAddZeroes } from '../src/helpers';
 
 jest.setTimeout(60000);
@@ -18,11 +17,11 @@ describe('resume distribution', () => {
     await driver.addManualDistributionEvent(
       0,
       await driver.web3.eth.getBlockNumber(),
-      60000,
+      70000,
       0,
       driver.delegateAddress!,
-      driver.delegateAddress!,
-      inflate15(1000)
+      [driver.delegateAddress!],
+      [inflate15(1000)]
     );
   });
 
@@ -49,13 +48,13 @@ describe('resume distribution', () => {
     }
 
     // log history result
-    console.log(historyDownloader.history);
+    console.log('history:', JSON.stringify(historyDownloader.history, null, 2));
 
     // expectations over history result
     expect(historyDownloader.history.delegateAddress).toEqual(driver.delegateAddress);
     expect(historyDownloader.history.startingBlock).toEqual(0);
     expect(historyDownloader.history.lastProcessedBlock).toEqual(latestEthereumBlock);
-    expect(historyDownloader.history.committeeChangeEvents.length).toBeGreaterThan(0);
+    expect(historyDownloader.history.committeeSnapshotEvents.length).toBeGreaterThan(0);
     expect(historyDownloader.history.delegationChangeEvents.length).toBeGreaterThan(0);
     expect(historyDownloader.history.delegationChangeEvents[0].delegatorAddress).toEqual(driver.delegateAddress);
     expect(historyDownloader.history.assignmentEvents.length).toBeGreaterThan(0);
@@ -65,19 +64,19 @@ describe('resume distribution', () => {
     expect(Distribution.granularity).toEqual(bnAddZeroes(1, 15));
 
     // create a new distribution of rewards up to this block
-    const distribution = Distribution.getLast(latestEthereumBlock, historyDownloader.history);
+    const distribution = Distribution.getLastDistribution(latestEthereumBlock, historyDownloader.history);
     if (distribution == null) throw new Error(`distribution is null`);
     distribution.setEthereumContracts(driver.web3, driver.ethereumContractAddresses!);
 
     // log division result
-    console.log(distribution.division);
+    console.log('division:', JSON.stringify(distribution.division, null, 2));
 
     // expectations over division result
-    expect(Object.keys(distribution.division.amounts).length).toEqual(5);
+    expect(Object.keys(distribution.division.amountsWithoutDelegate).length).toEqual(4);
 
     // send distribution transactions
     const { isComplete, txHashes } = await distribution.sendTransactionBatch(10, 1);
-    console.log(txHashes);
+    console.log('txHashes:', txHashes);
     expect(isComplete).toEqual(true);
 
     // expectations over new distribution events
@@ -86,16 +85,14 @@ describe('resume distribution', () => {
     expect(events[0].returnValues).toHaveProperty('distributer', driver.delegateAddress);
     expect(events[0].returnValues).toHaveProperty('fromBlock', '0');
     expect(events[0].returnValues).toHaveProperty('toBlock', (latestEthereumBlock - 1).toString());
-    expect(events[0].returnValues).toHaveProperty('split', '60000');
+    expect(events[0].returnValues).toHaveProperty('split', '70000');
     expect(events[0].returnValues).toHaveProperty('txIndex', '1');
-    expect(events[0].returnValues.amounts).toEqual(
-      // does not contain the validator itself since amounts jitter slightly
-      expect.arrayContaining([
-        inflate15(18936).toString(),
-        inflate15(14202).toString(),
-        inflate15(11835).toString(),
-        inflate15(2367).toString(),
-      ])
-    );
+    expect(events[0].returnValues.amounts).toEqual([
+      inflate15(180480).toString(),
+      inflate15(16569).toString(),
+      inflate15(13808).toString(),
+      inflate15(2761).toString(),
+      inflate15(22093).toString(),
+    ]);
   });
 });

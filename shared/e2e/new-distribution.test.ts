@@ -1,6 +1,5 @@
 import { TestkitDriver, log, inflate15 } from './driver';
 import { HistoryDownloader, Distribution } from '../src';
-import BN from 'bn.js';
 import { bnAddZeroes } from '../src/helpers';
 
 jest.setTimeout(60000);
@@ -39,13 +38,13 @@ describe('new distribution', () => {
     }
 
     // log history result
-    console.log(historyDownloader.history);
+    console.log('history:', JSON.stringify(historyDownloader.history, null, 2));
 
     // expectations over history result
     expect(historyDownloader.history.delegateAddress).toEqual(driver.delegateAddress);
     expect(historyDownloader.history.startingBlock).toEqual(0);
     expect(historyDownloader.history.lastProcessedBlock).toEqual(latestEthereumBlock);
-    expect(historyDownloader.history.committeeChangeEvents.length).toBeGreaterThan(0);
+    expect(historyDownloader.history.committeeSnapshotEvents.length).toBeGreaterThan(0);
     expect(historyDownloader.history.delegationChangeEvents.length).toBeGreaterThan(0);
     expect(historyDownloader.history.delegationChangeEvents[0].delegatorAddress).toEqual(driver.delegateAddress);
     expect(historyDownloader.history.assignmentEvents.length).toBeGreaterThan(0);
@@ -55,7 +54,7 @@ describe('new distribution', () => {
     expect(Distribution.granularity).toEqual(bnAddZeroes(1, 15));
 
     // create a new distribution of rewards up to this block
-    const distribution = Distribution.startNew(
+    const distribution = Distribution.startNewDistribution(
       latestEthereumBlock,
       { fractionForDelegators: 0.7 },
       historyDownloader.history
@@ -63,18 +62,18 @@ describe('new distribution', () => {
     distribution.setEthereumContracts(driver.web3, driver.ethereumContractAddresses!);
 
     // log division result
-    console.log(distribution.division);
+    console.log('division:', JSON.stringify(distribution.division, null, 2));
 
     // expectations over division result
-    const totalAmount = new BN(0);
-    for (const [, amount] of Object.entries(distribution.division.amounts)) totalAmount.iadd(amount);
+    const totalAmount = distribution.division.amountForDelegate.clone();
+    for (const [, amount] of Object.entries(distribution.division.amountsWithoutDelegate)) totalAmount.iadd(amount);
     const balance = await driver.getCurrentRewardBalance(driver.delegateAddress!);
     expect(totalAmount).toEqual(balance);
-    expect(Object.keys(distribution.division.amounts).length).toEqual(5);
+    expect(Object.keys(distribution.division.amountsWithoutDelegate).length).toEqual(4);
 
     // send distribution transactions
     const { isComplete, txHashes } = await distribution.sendTransactionBatch(3, 1);
-    console.log(txHashes);
+    console.log('txHashes:', txHashes);
     expect(isComplete).toEqual(true);
 
     // expectations over new distribution events
@@ -85,19 +84,17 @@ describe('new distribution', () => {
     expect(events[0].returnValues).toHaveProperty('toBlock', latestEthereumBlock.toString());
     expect(events[0].returnValues).toHaveProperty('split', '70000');
     expect(events[0].returnValues).toHaveProperty('txIndex', '0');
+    expect(events[0].returnValues.amounts).toEqual([
+      inflate15(108886).toString(),
+      inflate15(16569).toString(),
+      inflate15(13808).toString(),
+      inflate15(2761).toString(),
+    ]);
     expect(events[1].returnValues).toHaveProperty('distributer', driver.delegateAddress);
     expect(events[1].returnValues).toHaveProperty('fromBlock', '0');
     expect(events[1].returnValues).toHaveProperty('toBlock', latestEthereumBlock.toString());
     expect(events[1].returnValues).toHaveProperty('split', '70000');
     expect(events[1].returnValues).toHaveProperty('txIndex', '1');
-    expect(events[0].returnValues.amounts.concat(events[1].returnValues.amounts)).toEqual(
-      // does not contain the validator itself since amounts jitter slightly
-      expect.arrayContaining([
-        inflate15(22093).toString(),
-        inflate15(16569).toString(),
-        inflate15(13808).toString(),
-        inflate15(2761).toString(),
-      ])
-    );
+    expect(events[1].returnValues.amounts).toEqual([inflate15(72594).toString(), inflate15(22093).toString()]);
   });
 });

@@ -12,6 +12,7 @@
     "build": "tsc",
     "pretest": "npm run typecheck && npm run lint",
     "test": "jest",
+    "test:quick": "jest",
     "test:e2e": "jest --config ./e2e/jest.json --forceExit --runInBand",
     "prettify": "npx prettier \"src/**/*.ts\" --write && npx prettier \"e2e/**/*.ts\" --write",
     "start-ganache": "ganache-cli -p 7545 -i 5777 -a 100 --gasLimit 0x7FFFFFFF --gasPrice 1 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\""
@@ -31,7 +32,7 @@
     "typescript": "^3.7.5"
   },
   "dependencies": {
-    "@orbs-network/orbs-ethereum-contracts-v2": "0.0.11",
+    "@orbs-network/orbs-ethereum-contracts-v2": "0.0.14",
     "bignumber.js": "^9.0.0",
     "bn.js": "^5.1.1",
     "lodash": "^4.17.15",

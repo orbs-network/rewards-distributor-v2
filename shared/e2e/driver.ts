@@ -55,6 +55,7 @@ export class TestkitDriver {
     await d.erc20.approve(d.rewards.address, poolAmount);
     await d.rewards.setAnnualStakingRewardsRate(annualRate, poolAmount, { from: d.functionalOwner.address });
     await d.rewards.topUpStakingRewardsPool(poolAmount);
+    await d.rewards.setMaxDelegatorsStakingRewardsPercentMille(70000, { from: d.functionalOwner.address });
 
     // setup 3 validators (max committee size is 3)
     const v1 = d.newParticipant();
@@ -132,17 +133,19 @@ export class TestkitDriver {
     split: number,
     txIndex: number,
     from: string,
-    to: string,
-    amount: BN
+    to: string[],
+    amounts: BN[]
   ) {
+    const total = new BN(0);
+    for (const amount of amounts) total.iadd(amount);
     await this.orbsV2Driver?.rewards.distributeOrbsTokenStakingRewards(
-      amount,
+      total,
       fromBlock,
       toBlock,
       split,
       txIndex,
-      [to],
-      [amount],
+      to,
+      amounts,
       { from: from }
     );
   }

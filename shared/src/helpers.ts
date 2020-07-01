@@ -31,3 +31,30 @@ export function bnAddZeroes(a: number, zeroes: number): BN {
 export async function sleep(millis: number) {
   await new Promise((r) => setTimeout(r, millis));
 }
+
+// efficient binary search, returns -1 if not found
+export function findLowestClosestIndexToBlock(block: number, events: { block: number }[]): number {
+  if (events.length == 0) {
+    return -1;
+  }
+  let left = 0;
+  let right = events.length - 1;
+  while (events[left].block < block) {
+    if (events[right].block < block) {
+      return -1;
+    }
+    let middle = Math.floor((left + right) / 2);
+    if (events[middle].block >= block) {
+      if (middle == right) middle--;
+      right = middle;
+    } else {
+      if (middle == left) middle++;
+      left = middle;
+    }
+  }
+  return left;
+}
+
+BN.prototype.toJSON = function () {
+  return this.toString(10);
+};

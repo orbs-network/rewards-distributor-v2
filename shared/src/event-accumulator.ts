@@ -1,5 +1,5 @@
 import BN from 'bn.js';
-import { EventHistory } from './history';
+import { EventHistory } from './model';
 import { bnDivideAsNumber, bnZero } from './helpers';
 
 // internal class used by Calculator to do event sourcing
@@ -24,8 +24,8 @@ export class CommitteeAccumulator {
     if (block < this.currentBlock) {
       throw new Error(`Trying to go backwards to block ${block} in accumulator that is on block ${this.currentBlock}.`);
     }
-    while (this.nextIndex < this.history.committeeChangeEvents.length) {
-      const event = this.history.committeeChangeEvents[this.nextIndex];
+    while (this.nextIndex < this.history.committeeSnapshotEvents.length) {
+      const event = this.history.committeeSnapshotEvents[this.nextIndex];
       if (event.block > block) break;
       this.currentState = event.newRelativeWeightInCommittee;
       this.currentBlock = event.block;

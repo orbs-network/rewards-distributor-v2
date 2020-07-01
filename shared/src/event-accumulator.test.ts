@@ -1,5 +1,5 @@
-import { EventHistory } from './history';
-import { CommitteeAccumulator, DelegationsAccumulator } from './accumulator';
+import { EventHistory } from './model';
+import { CommitteeAccumulator, DelegationsAccumulator } from './event-accumulator';
 import BN from 'bn.js';
 
 const getEmptyBlockHistory = (size: number) => {
@@ -10,11 +10,11 @@ const getEmptyBlockHistory = (size: number) => {
 
 const getHistoryWithCommitteeChanges = () => {
   const h = new EventHistory('G1', 0);
-  h.committeeChangeEvents.push({ block: 2, newRelativeWeightInCommittee: 0.5 });
-  h.committeeChangeEvents.push({ block: 4, newRelativeWeightInCommittee: 0.3 });
-  h.committeeChangeEvents.push({ block: 5, newRelativeWeightInCommittee: 0.7 });
-  h.committeeChangeEvents.push({ block: 8, newRelativeWeightInCommittee: 0.1 });
-  h.committeeChangeEvents.push({ block: 8, newRelativeWeightInCommittee: 0.2 });
+  h.committeeSnapshotEvents.push({ block: 2, newRelativeWeightInCommittee: 0.5 });
+  h.committeeSnapshotEvents.push({ block: 4, newRelativeWeightInCommittee: 0.3 });
+  h.committeeSnapshotEvents.push({ block: 5, newRelativeWeightInCommittee: 0.7 });
+  h.committeeSnapshotEvents.push({ block: 8, newRelativeWeightInCommittee: 0.1 });
+  h.committeeSnapshotEvents.push({ block: 8, newRelativeWeightInCommittee: 0.2 });
   h.lastProcessedBlock = 10;
   return h;
 };

@@ -46,9 +46,9 @@ const history = historyDownloader.history;
 const split = { fractionForDelegators: 0.7 }; // delegate gives 70% to delegators
 
 // we may have an unfinished one that we must finish
-let distribution = Distribution.getLast(latestEthereumBlock, history);
+let distribution = Distribution.getLastDistribution(latestEthereumBlock, history);
 if (distribution == null) {
-  distribution = Distribution.startNew(latestEthereumBlock, split, history);
+  distribution = Distribution.startNewDistribution(latestEthereumBlock, split, history);
 }
 
 // present the intended division (who gets what)
