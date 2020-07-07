@@ -1,6 +1,6 @@
 import BN from 'bn.js';
 import { EventHistory, Split, Division } from './model';
-import { CommitteeAccumulator, DelegationsAccumulator } from './event-accumulator';
+import { DelegationsAccumulator } from './event-accumulator';
 import { bnMultiplyByNumber, findLowestClosestIndexToBlock } from './helpers';
 
 // internal class with static functions used to calculate a division (how much every delegator is owed)
@@ -10,7 +10,6 @@ export class Calculator {
   static calcDivisionForSingleAssignment(
     assignmentEventIndex: number,
     split: Split,
-    committeeAccumulator: CommitteeAccumulator,
     delegationsAccumulator: DelegationsAccumulator,
     history: EventHistory
   ): Division {
@@ -41,12 +40,11 @@ export class Calculator {
     // step 3: for each block sum the weight of each delegator of the total reward for the entire comittee
     // we do this step toghether for delegate and delegators
     for (let block = firstBlock; block <= lastBlock; block++) {
-      const delegateWeightInComitteeForBlock = committeeAccumulator.forBlock(block);
       const delegationsSnapshotForBlock = delegationsAccumulator.forBlock(block);
       for (const [delegatorAddress, delegatorWeightInDelegateForBlock] of Object.entries(
         delegationsSnapshotForBlock.relativeWeight
       )) {
-        const delegatorWeightInComitteeForBlock = delegatorWeightInDelegateForBlock * delegateWeightInComitteeForBlock;
+        const delegatorWeightInComitteeForBlock = delegatorWeightInDelegateForBlock;
         if (sumWeightsOfTotalRewards[delegatorAddress]) {
           sumWeightsOfTotalRewards[delegatorAddress] += delegatorWeightInComitteeForBlock;
         } else {
@@ -102,7 +100,6 @@ export class Calculator {
       throw new Error(`First block ${firstBlock} is after last block ${lastBlock}.`);
     }
     const res: Division = { amountsWithoutDelegate: {}, amountForDelegate: new BN(0) };
-    const committeeAccumulator = new CommitteeAccumulator(history);
     const delegationsAccumulator = new DelegationsAccumulator(history);
     let index = findLowestClosestIndexToBlock(firstBlock, history.assignmentEvents);
     while (
@@ -110,13 +107,7 @@ export class Calculator {
       index < history.assignmentEvents.length &&
       history.assignmentEvents[index].block <= lastBlock
     ) {
-      const division = Calculator.calcDivisionForSingleAssignment(
-        index,
-        split,
-        committeeAccumulator,
-        delegationsAccumulator,
-        history
-      );
+      const division = Calculator.calcDivisionForSingleAssignment(index, split, delegationsAccumulator, history);
       // add the delegate amount to res
       res.amountForDelegate.iadd(division.amountForDelegate);
       // add all the amounts without delegate in division to res

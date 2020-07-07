@@ -14,19 +14,14 @@ export type TxProgressNotification = (progress: number, confirmations: number) =
 export class EthereumAdapter {
   private web3?: Web3;
   private contracts: {
-    Committee?: Contract;
     Delegations?: Contract;
     Rewards?: Contract;
   } = {};
 
   setContracts(web3: Web3, contractAddresses: EthereumContractAddresses) {
     this.web3 = web3;
-    if (contractAddresses.Committee) {
-      // TODO: replace this line with a nicer way to get the abi's
-      const abi = compiledContracts.Committee.abi;
-      this.contracts.Committee = new web3.eth.Contract(abi, contractAddresses.Committee);
-    }
     if (contractAddresses.Delegations) {
+      // TODO: replace this line with a nicer way to get the abi's
       const abi = compiledContracts.Delegations.abi;
       this.contracts.Delegations = new web3.eth.Contract(abi, contractAddresses.Delegations);
     }
@@ -38,7 +33,7 @@ export class EthereumAdapter {
 
   // TODO: add support for filters when ready (to optimize)
   async readEvents(
-    contract: 'Committee' | 'Delegations' | 'Rewards',
+    contract: 'Delegations' | 'Rewards',
     event: string,
     fromBlock: number,
     toBlock: number

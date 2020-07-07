@@ -28,7 +28,6 @@ export class TestkitDriver {
     if (customWeb3Provider) options.web3Provider = customWeb3Provider;
     this.orbsV2Driver = await OrbsV2Driver.new(options);
     this.ethereumContractAddresses = {
-      Committee: this.orbsV2Driver.committee.address,
       Delegations: this.orbsV2Driver.delegations.address,
       Rewards: this.orbsV2Driver.rewards.address,
     };

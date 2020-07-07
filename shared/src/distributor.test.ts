@@ -97,7 +97,6 @@ const getHistoryWithCompleteDistribution = () => {
     batchSplit: { fractionForDelegators: 0.5 },
   });
   h.assignmentEvents.push({ block: 5, amount: new BN(1200) });
-  h.committeeSnapshotEvents.push({ block: 1, newRelativeWeightInCommittee: 0.5 });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D1', newDelegatedStake: new BN(1000) });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D2', newDelegatedStake: new BN(2000) });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D3', newDelegatedStake: new BN(3000) });
@@ -117,7 +116,6 @@ const getHistoryWithIncompleteDistribution = () => {
     batchSplit: { fractionForDelegators: 0.5 },
   });
   h.assignmentEvents.push({ block: 5, amount: new BN(1200) });
-  h.committeeSnapshotEvents.push({ block: 1, newRelativeWeightInCommittee: 0.5 });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D1', newDelegatedStake: new BN(1000) });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D2', newDelegatedStake: new BN(2000) });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D3', newDelegatedStake: new BN(3000) });
@@ -137,7 +135,6 @@ const getHistoryWithCompleteNoDelegatorsDistribution = () => {
     batchSplit: { fractionForDelegators: 0.5 },
   });
   h.assignmentEvents.push({ block: 5, amount: new BN(600) });
-  h.committeeSnapshotEvents.push({ block: 1, newRelativeWeightInCommittee: 0.5 });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'G1', newDelegatedStake: new BN(1000) });
   h.lastProcessedBlock = 20;
   return h;
@@ -155,7 +152,6 @@ const getHistoryWithIncompleteNoDelegatorsDistribution = () => {
     batchSplit: { fractionForDelegators: 0.5 },
   });
   h.assignmentEvents.push({ block: 5, amount: new BN(600) });
-  h.committeeSnapshotEvents.push({ block: 1, newRelativeWeightInCommittee: 0.5 });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'G1', newDelegatedStake: new BN(1000) });
   h.lastProcessedBlock = 20;
   return h;
@@ -219,7 +215,6 @@ describe('startNewDistribution', () => {
 const getHistoryWithUnstartedDistribution = () => {
   const h = new EventHistory('G1', 1);
   h.assignmentEvents.push({ block: 5, amount: new BN(1200) });
-  h.committeeSnapshotEvents.push({ block: 1, newRelativeWeightInCommittee: 0.5 });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D1', newDelegatedStake: new BN(1000) });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D2', newDelegatedStake: new BN(2000) });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D3', newDelegatedStake: new BN(3000) });

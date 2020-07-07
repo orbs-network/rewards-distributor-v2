@@ -3,7 +3,6 @@ import BN from 'bn.js';
 import { EventData } from 'web3-eth-contract';
 import pLimit from 'p-limit';
 import Web3 from 'web3';
-import { bnZero, bnDivideAsNumber } from './helpers';
 import { EthereumContractAddresses } from '.';
 import { EthereumAdapter } from './ethereum';
 import { EventHistory } from './model';
@@ -40,22 +39,20 @@ export class HistoryDownloader {
     }
 
     const requests = [];
-    requests[0] = limit(() => this.ethereum.readEvents('Committee', 'CommitteeSnapshot', fromBlock, toBlock));
-    requests[1] = limit(() => this.ethereum.readEvents('Delegations', 'DelegatedStakeChanged', fromBlock, toBlock));
-    requests[2] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsAssigned', fromBlock, toBlock));
-    requests[3] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsDistributed', fromBlock, toBlock));
+    requests[0] = limit(() => this.ethereum.readEvents('Delegations', 'DelegatedStakeChanged', fromBlock, toBlock));
+    requests[1] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsAssigned', fromBlock, toBlock));
+    requests[2] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsDistributed', fromBlock, toBlock));
 
     const results = await Promise.all(requests);
-    const d1 = HistoryDownloader._parseCommitteeSnapshotEvents(results[0], this.history);
-    const d2 = HistoryDownloader._parseDelegationChangedEvents(results[1], this.history);
-    const d3 = HistoryDownloader._parseRewardsAssignedEvents(results[2], this.history);
-    const d4 = HistoryDownloader._parseRewardsDistributedEvents(results[3], this.history);
+    const d0 = HistoryDownloader._parseDelegationChangedEvents(results[0], this.history);
+    const d1 = HistoryDownloader._parseRewardsAssignedEvents(results[1], this.history);
+    const d2 = HistoryDownloader._parseRewardsDistributedEvents(results[2], this.history);
 
     this.history.lastProcessedBlock = toBlock;
 
     // parse extra histories for all delegates if required (default no)
     if (this.storeExtraHistoryPerDelegate) {
-      this._parseExtraHistoriesPerDelegate(_.union(d1, d2, d3, d4), results, toBlock);
+      this._parseExtraHistoriesPerDelegate(_.union(d0, d1, d2), results, toBlock);
     }
 
     return this.history.lastProcessedBlock;
@@ -67,41 +64,13 @@ export class HistoryDownloader {
         this.extraHistoryPerDelegate[delegateAddress] = new EventHistory(delegateAddress, this.history.startingBlock);
       }
       const delegateHistory = this.extraHistoryPerDelegate[delegateAddress];
-      HistoryDownloader._parseCommitteeSnapshotEvents(results[0], delegateHistory);
-      HistoryDownloader._parseDelegationChangedEvents(results[1], delegateHistory);
-      HistoryDownloader._parseRewardsAssignedEvents(results[2], delegateHistory);
-      HistoryDownloader._parseRewardsDistributedEvents(results[3], delegateHistory);
+      HistoryDownloader._parseDelegationChangedEvents(results[0], delegateHistory);
+      HistoryDownloader._parseRewardsAssignedEvents(results[1], delegateHistory);
+      HistoryDownloader._parseRewardsDistributedEvents(results[2], delegateHistory);
     }
     for (const [, delegateHistory] of Object.entries(this.extraHistoryPerDelegate)) {
       delegateHistory.lastProcessedBlock = toBlock;
     }
-  }
-
-  // appends events to history, returns all delegates it encountered
-  static _parseCommitteeSnapshotEvents(events: EventData[], history: EventHistory): string[] {
-    const allDelegates: { [delegateAddress: string]: boolean } = {};
-    for (const event of events) {
-      // for debug: console.log(event.blockNumber, event.returnValues);
-      const totalWeight = new BN(0);
-      let delegateWeight = new BN(0);
-      for (let i = 0; i < event.returnValues.addrs.length; i++) {
-        allDelegates[event.returnValues.addrs[i]] = true;
-        const weight = new BN(event.returnValues.weights[i]);
-        totalWeight.iadd(weight);
-        if (event.returnValues.addrs[i].toLowerCase() == history.delegateAddress.toLowerCase()) {
-          delegateWeight = weight;
-        }
-      }
-      let newRelativeWeightInCommittee = 0;
-      if (totalWeight.gt(bnZero)) {
-        newRelativeWeightInCommittee = bnDivideAsNumber(delegateWeight, totalWeight);
-      }
-      history.committeeSnapshotEvents.push({
-        block: event.blockNumber,
-        newRelativeWeightInCommittee: newRelativeWeightInCommittee,
-      });
-    }
-    return Object.keys(allDelegates);
   }
 
   // appends events relevant to the delegate to history, returns all delegates it encountered

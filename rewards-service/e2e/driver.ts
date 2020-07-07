@@ -19,7 +19,6 @@ export class TestEnvironment {
     return {
       EthereumEndpoint: 'http://ganache:7545',
       SignerEndpoint: 'http://signer:7777',
-      EthereumCommitteeContract: this.sharedTestkit.ethereumContractAddresses?.Committee,
       EthereumDelegationsContract: this.sharedTestkit.ethereumContractAddresses?.Delegations,
       EthereumRewardsContract: this.sharedTestkit.ethereumContractAddresses?.Rewards,
       DelegateAddress: this.sharedTestkit.delegateAddress,

@@ -4,7 +4,6 @@ import BN from 'bn.js';
 export class EventHistory {
   public lastProcessedBlock = 0;
   public delegationChangeEvents: DelegationChangeEvent[] = [];
-  public committeeSnapshotEvents: CommitteeChangeEvent[] = [];
   public assignmentEvents: AssignmentEvent[] = [];
   public distributionEvents: DistributionEvent[] = [];
   constructor(public delegateAddress: string, public startingBlock: number) {}
@@ -15,12 +14,6 @@ export interface DelegationChangeEvent {
   block: number;
   delegatorAddress: string;
   newDelegatedStake: BN; // total stake of this delegator that is staked towards this delegate
-}
-
-// internal abstracted model to hold committee changes
-export interface CommitteeChangeEvent {
-  block: number;
-  newRelativeWeightInCommittee: number; // [0,1] if delegate has half the effective stake of the committee then 0.5, if not in committee then 0
 }
 
 // internal abstracted model to hold assignments events

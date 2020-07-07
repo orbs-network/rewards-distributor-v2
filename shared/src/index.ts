@@ -5,7 +5,6 @@ export { HistoryDownloader } from './history-downloader';
 export { Distribution } from './distributor';
 
 export interface EthereumContractAddresses {
-  Committee: string;
   Delegations: string;
   Rewards: string;
 }

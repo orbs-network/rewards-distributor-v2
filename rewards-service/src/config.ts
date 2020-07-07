@@ -1,7 +1,6 @@
 export interface Configuration {
   EthereumEndpoint: string;
   SignerEndpoint: string;
-  EthereumCommitteeContract: string;
   EthereumDelegationsContract: string;
   EthereumRewardsContract: string;
   DelegateAddress: string;
@@ -20,12 +19,6 @@ export function validateConfiguration(config: Configuration) {
   }
   if (!config.SignerEndpoint) {
     throw new Error(`SignerEndpoint is empty in config.`);
-  }
-  if (!config.EthereumCommitteeContract) {
-    throw new Error(`EthereumCommitteeContract is empty in config.`);
-  }
-  if (!config.EthereumCommitteeContract.startsWith('0x')) {
-    throw new Error(`EthereumCommitteeContract does not start with "0x".`);
   }
   if (!config.EthereumDelegationsContract) {
     throw new Error(`EthereumDelegationsContract is empty in config.`);
