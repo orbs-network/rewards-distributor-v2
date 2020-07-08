@@ -4,6 +4,8 @@ import { writeFileSync } from 'fs';
 import { ensureFileDirectoryExists, JsonResponse, getCurrentClockTime, sleep } from '../helpers';
 import { Configuration } from '../config';
 
+const HISTORY_BATCH_TIME_ALLOWED_DELAY = 60 * 60; // seconds
+
 const timeOriginallyLaunched = getCurrentClockTime();
 
 export class StatusWriter {
@@ -16,6 +18,11 @@ export class StatusWriter {
       Timestamp: new Date().toISOString(),
       Payload: {
         Uptime: getCurrentClockTime() - timeOriginallyLaunched,
+        MemoryBytesUsed: process.memoryUsage().heapUsed,
+        HistoryMaxProcessedBlock: this.state.HistoryMaxProcessedBlock,
+        LastHistoryBatchTime: this.state.LastHistoryBatchTime,
+        HistoryTotalAssignmentEvents: this.state.HistoryTotalAssignmentEvents,
+        HistoryTotalDistributionEvents: this.state.HistoryTotalDistributionEvents,
         Config: this.config,
       },
     };
@@ -42,11 +49,18 @@ export class StatusWriter {
 
 function getStatusText(state: State) {
   const res = [];
-  res.push();
-  res.push(`temp`);
+  const now = getCurrentClockTime();
+  const historyBatchAgo = now - state.LastHistoryBatchTime;
+  res.push(`history block = ${state.HistoryMaxProcessedBlock} (updated ${historyBatchAgo} sec ago)`);
   return res.join(', ');
 }
 
 function getErrorText(state: State) {
-  return '';
+  const res = [];
+  const now = getCurrentClockTime();
+  const historyBatchAgo = now - state.LastHistoryBatchTime;
+  if (historyBatchAgo > HISTORY_BATCH_TIME_ALLOWED_DELAY) {
+    res.push(`History last update time is too old (${historyBatchAgo} sec ago).`);
+  }
+  return res.join(' ');
 }

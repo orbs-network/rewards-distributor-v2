@@ -4,11 +4,16 @@ ENV NODE_ENV production
 
 WORKDIR /opt/orbs
 
-COPY package*.json ./
+RUN mkdir -p /opt/shared/
+COPY shared/package*.json /opt/shared/
+RUN cd /opt/shared/ && npm install && cd -
+COPY shared/dist /opt/shared/dist
+
+COPY rewards-service/package*.json ./
 
 RUN apk add --no-cache git
 RUN npm install
 
-COPY dist ./dist
+COPY rewards-service/dist ./dist
 
 CMD [ "npm", "start" ]

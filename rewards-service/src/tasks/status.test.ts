@@ -8,6 +8,7 @@ describe('status', () => {
   beforeAll(() => {
     console.log('Use console.log before mock-fs to workaround https://github.com/facebook/jest/issues/5792');
   });
+
   afterEach(() => {
     mockFs.restore();
   });

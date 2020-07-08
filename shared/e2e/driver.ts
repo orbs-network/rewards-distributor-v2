@@ -153,6 +153,12 @@ export class TestkitDriver {
     const res = await this.orbsV2Driver?.rewards.getStakingRewardBalance(delegateAddress);
     return new BN(res!);
   }
+
+  async getCurrentBlock(): Promise<number> {
+    const d = this.orbsV2Driver;
+    if (!d) throw new Error(`Call deployOrbsV2Contracts before getCurrentBlock.`);
+    return await d.web3.eth.getBlockNumber();
+  }
 }
 
 export function inflate15(a: number) {

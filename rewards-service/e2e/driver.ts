@@ -21,7 +21,7 @@ export class TestEnvironment {
       SignerEndpoint: 'http://signer:7777',
       EthereumDelegationsContract: this.sharedTestkit.ethereumContractAddresses?.Delegations,
       EthereumRewardsContract: this.sharedTestkit.ethereumContractAddresses?.Rewards,
-      DelegateAddress: this.sharedTestkit.delegateAddress,
+      GuardianAddress: this.sharedTestkit.delegateAddress,
       StatusJsonPath: './status/status.json',
       StatusPollTimeSeconds: 1,
       HistoryPollIntervalSeconds: 1,
@@ -64,6 +64,7 @@ export class TestEnvironment {
       });
       log('[E2E] ethereum PoS contracts deployed');
       await this.sharedTestkit.prepareScenario();
+      log('[E2E] delegate address: ' + this.sharedTestkit.delegateAddress);
     });
 
     // step 4 - write config file for app

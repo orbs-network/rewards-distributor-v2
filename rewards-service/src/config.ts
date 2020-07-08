@@ -3,7 +3,7 @@ export interface Configuration {
   SignerEndpoint: string;
   EthereumDelegationsContract: string;
   EthereumRewardsContract: string;
-  DelegateAddress: string;
+  GuardianAddress: string;
   StatusJsonPath: string;
   StatusPollTimeSeconds: number;
   HistoryPollIntervalSeconds: number;
@@ -36,14 +36,14 @@ export function validateConfiguration(config: Configuration) {
   if (!config.EthereumRewardsContract.startsWith('0x')) {
     throw new Error(`EthereumRewardsContract does not start with "0x".`);
   }
-  if (!config.DelegateAddress) {
-    throw new Error(`DelegateAddress is empty in config.`);
+  if (!config.GuardianAddress) {
+    throw new Error(`GuardianAddress is empty in config.`);
   }
-  if (!config.DelegateAddress.startsWith('0x')) {
-    throw new Error(`DelegateAddress does not start with "0x".`);
+  if (!config.GuardianAddress.startsWith('0x')) {
+    throw new Error(`GuardianAddress does not start with "0x".`);
   }
-  if (config.DelegateAddress.length != '0x16fcF728F8dc3F687132f2157D8379c021a08C12'.length) {
-    throw new Error(`DelegateAddress has incorrect length: ${config.DelegateAddress.length}.`);
+  if (config.GuardianAddress.length != '0x16fcF728F8dc3F687132f2157D8379c021a08C12'.length) {
+    throw new Error(`GuardianAddress has incorrect length: ${config.GuardianAddress.length}.`);
   }
   if (!config.StatusJsonPath) {
     throw new Error(`StatusJsonPath is empty in config.`);
