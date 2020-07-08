@@ -6,7 +6,6 @@ WORKDIR /opt/orbs
 
 RUN mkdir -p /opt/shared/
 COPY shared/package*.json /opt/shared/
-RUN cd /opt/shared/ && npm install && cd -
 COPY shared/dist /opt/shared/dist
 
 COPY rewards-service/package*.json ./

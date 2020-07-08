@@ -31,10 +31,10 @@ export class TestEnvironment {
 
   // runs all the docker instances with docker-compose
   launchServices() {
-    log('[E2E] driver launchServices() start');
+    beforeAll(() => log('[E2E] driver launchServices() start'));
 
     // step 1 - launch ganache docker
-    log('[E2E] launch ganache docker');
+    beforeAll(() => log('[E2E] launch ganache docker'));
     this.envName = dockerComposeTool(beforeAll, afterAll, this.pathToDockerCompose, {
       startOnlyTheseServices: ['ganache'],
       containerCleanUp: false,
@@ -67,6 +67,10 @@ export class TestEnvironment {
       log('[E2E] delegate address: ' + this.sharedTestkit.delegateAddress);
     });
 
+    afterAll(async () => {
+      await this.sharedTestkit.closeConnections();
+    });
+
     // step 4 - write config file for app
     beforeAll(() => {
       log('[E2E] write config file for app');
@@ -78,7 +82,7 @@ export class TestEnvironment {
     });
 
     // step 5 - launch app docker
-    log('[E2E] launch app docker');
+    beforeAll(() => log('[E2E] launch app docker'));
     dockerComposeTool(beforeAll, afterAll, this.pathToDockerCompose, {
       envName: this.envName,
       startOnlyTheseServices: ['app'],
@@ -107,7 +111,7 @@ export class TestEnvironment {
       });
     });
 
-    log('[E2E] driver launchServices() finished');
+    beforeAll(() => log('[E2E] driver launchServices() finished'));
   }
 
   // inspired by https://github.com/applitools/docker-compose-mocha/blob/master/lib/get-logs-for-service.js
