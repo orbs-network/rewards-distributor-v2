@@ -5,12 +5,16 @@ export interface Configuration {
   EthereumRewardsContract: string;
   DelegateAddress: string;
   StatusJsonPath: string;
-  RunLoopPollTimeSeconds: number;
+  StatusPollTimeSeconds: number;
+  HistoryPollIntervalSeconds: number;
+  EthereumFirstBlock: number;
 }
 
 export const defaultConfiguration = {
   StatusJsonPath: './status/status.json',
-  RunLoopPollTimeSeconds: 20,
+  StatusPollTimeSeconds: 20,
+  HistoryPollIntervalSeconds: 5 * 60,
+  EthereumFirstBlock: 0,
 };
 
 export function validateConfiguration(config: Configuration) {
@@ -44,10 +48,19 @@ export function validateConfiguration(config: Configuration) {
   if (!config.StatusJsonPath) {
     throw new Error(`StatusJsonPath is empty in config.`);
   }
-  if (!config.RunLoopPollTimeSeconds) {
-    throw new Error(`RunLoopPollTimeSeconds is empty or zero.`);
+  if (!config.StatusPollTimeSeconds) {
+    throw new Error(`StatusPollTimeSeconds is empty or zero.`);
   }
-  if (typeof config.RunLoopPollTimeSeconds != 'number') {
-    throw new Error(`RunLoopPollTimeSeconds is not a number.`);
+  if (typeof config.StatusPollTimeSeconds != 'number') {
+    throw new Error(`StatusPollTimeSeconds is not a number.`);
+  }
+  if (!config.HistoryPollIntervalSeconds) {
+    throw new Error(`HistoryPollIntervalSeconds is empty or zero.`);
+  }
+  if (typeof config.HistoryPollIntervalSeconds != 'number') {
+    throw new Error(`HistoryPollIntervalSeconds is not a number.`);
+  }
+  if (typeof config.EthereumFirstBlock != 'number') {
+    throw new Error(`EthereumFirstBlock is not a number.`);
   }
 }

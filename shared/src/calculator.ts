@@ -44,6 +44,8 @@ export class Calculator {
       for (const [delegatorAddress, delegatorWeightInDelegateForBlock] of Object.entries(
         delegationsSnapshotForBlock.relativeWeight
       )) {
+        // we used to also multiply here by the delegate weight in the committee but this part was removed
+        // leaving the variable names as such for historic reasons
         const delegatorWeightInComitteeForBlock = delegatorWeightInDelegateForBlock;
         if (sumWeightsOfTotalRewards[delegatorAddress]) {
           sumWeightsOfTotalRewards[delegatorAddress] += delegatorWeightInComitteeForBlock;

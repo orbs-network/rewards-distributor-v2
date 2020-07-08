@@ -1,6 +1,6 @@
 import mockFs from 'mock-fs';
-import { writeStatusToDisk } from './status';
-import { State } from '..';
+import { StatusWriter } from './status';
+import { State } from '../model/state';
 import { readFileSync } from 'fs';
 import { exampleConfig } from '../config.example';
 
@@ -12,10 +12,12 @@ describe('status', () => {
     mockFs.restore();
   });
 
-  it('updates and writes Timestamp', () => {
-    const state = new State();
+  it('updates and writes Timestamp', async () => {
     mockFs({ ['./status/status.json']: '' });
-    writeStatusToDisk('./status/status.json', state, exampleConfig);
+
+    const state = new State();
+    const statusWriter = new StatusWriter(state, exampleConfig);
+    await statusWriter.run();
 
     const writtenContents = JSON.parse(readFileSync('./status/status.json').toString());
     console.log('result:', JSON.stringify(writtenContents, null, 2));

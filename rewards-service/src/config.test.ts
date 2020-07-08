@@ -31,7 +31,7 @@ describe('validateConfiguration', () => {
 
   it('fails when string given instead of number', () => {
     const invalidConfig = JSON.parse(JSON.stringify(exampleConfig));
-    invalidConfig.RunLoopPollTimeSeconds = '99'; // as string
+    invalidConfig.StatusPollTimeSeconds = '99'; // as string
     expect(() => validateConfiguration(invalidConfig)).toThrow();
   });
 });

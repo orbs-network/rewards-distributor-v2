@@ -10,7 +10,7 @@ describe('e2e with docker compose', () => {
   driver.launchServices();
 
   it('writes status.json', async () => {
-    await sleep(1000);
+    await sleep(3000);
 
     const status = await driver.catJsonInService('app', '/opt/orbs/status/status.json');
     console.log('status:', JSON.stringify(status, null, 2));

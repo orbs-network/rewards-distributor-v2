@@ -23,7 +23,9 @@ export class TestEnvironment {
       EthereumRewardsContract: this.sharedTestkit.ethereumContractAddresses?.Rewards,
       DelegateAddress: this.sharedTestkit.delegateAddress,
       StatusJsonPath: './status/status.json',
-      RunLoopPollTimeSeconds: 1,
+      StatusPollTimeSeconds: 1,
+      HistoryPollIntervalSeconds: 1,
+      EthereumFirstBlock: 0,
     };
   }
 

@@ -2,6 +2,11 @@ import _ from 'lodash';
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function errorString(e: any) {
+  return (e && e.stack) || '' + e;
+}
+
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

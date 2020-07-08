@@ -1,5 +1,5 @@
 import * as Logger from './logger';
-import { runLoop } from '.';
+import { run } from '.';
 import { parseArgs } from './cli-args';
 
 process.on('uncaughtException', function (err) {
@@ -8,17 +8,14 @@ process.on('uncaughtException', function (err) {
   process.exit(1);
 });
 
-process.on('SIGINT', function () {
-  Logger.log('Received SIGINT, shutting down.');
-  process.exit();
-});
-
 Logger.log('Service rewards-service started.');
 const config = parseArgs(process.argv);
 Logger.log(`Input config: '${JSON.stringify(config)}'.`);
 
-runLoop(config).catch((err) => {
-  Logger.log('Exception thrown from runLoop, shutting down:');
+try {
+  run(config);
+} catch (err) {
+  Logger.log('Exception thrown from main.run, shutting down:');
   Logger.error(err.stack);
   process.exit(128);
-});
+}
