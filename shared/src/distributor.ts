@@ -6,7 +6,7 @@ import BN from 'bn.js';
 import { EthereumContractAddresses } from '.';
 import Web3 from 'web3';
 import { bnAddZeroes } from './helpers';
-import { EthereumAdapter, TxProgressNotification } from './ethereum';
+import { EthereumAdapter, TransactionBatch, TxProgressNotification } from './ethereum';
 
 const DEFAULT_NUM_RECIPIENTS_PER_TX = 10; // without the delegate
 const DEFAULT_NUM_CONFIRMATIONS = 4;
@@ -175,23 +175,9 @@ export class Distribution {
     return Object.keys(remainder.remainingDelegators).length == 0 && remainder.remainingAmountForDelegate.isZero();
   }
 
-  async sendTransactionBatch(
-    numRecipientsPerTx?: number,
-    numConfirmations?: number,
-    confirmationTimeoutSeconds?: number,
-    progressCallback?: TxProgressNotification
-  ): Promise<{
-    isComplete: boolean;
-    txHashes: string[];
-  }> {
+  prepareTransactionBatch(numRecipientsPerTx?: number): TransactionBatch {
     if (!numRecipientsPerTx) {
       numRecipientsPerTx = DEFAULT_NUM_RECIPIENTS_PER_TX;
-    }
-    if (!numConfirmations && numConfirmations !== 0) {
-      numConfirmations = DEFAULT_NUM_CONFIRMATIONS;
-    }
-    if (!confirmationTimeoutSeconds) {
-      confirmationTimeoutSeconds = DEFAULT_CONFIRMATION_TIMEOUT_SECONDS;
     }
 
     // get the remainder that is left to distribute
@@ -202,14 +188,12 @@ export class Distribution {
     let nextTxIndex = remainder.maxTxIndex + 1; // will be zero for the first (-1+1)
 
     // make sure we have anything to send
-    if (sortedRemainingDelegators.length == 0 && amountLeftSoFarForDelegate.isZero()) {
-      return { isComplete: true, txHashes: [] };
-    }
+    if (sortedRemainingDelegators.length == 0 && amountLeftSoFarForDelegate.isZero()) return [];
 
-    Logger.log(`About to send batch based on remainder:\n${JSON.stringify(remainder, null, 2)}`);
+    Logger.log(`Preparing batch based on remainder:\n${JSON.stringify(remainder, null, 2)}`);
 
     // prepare batch
-    const batch = [];
+    const res = [];
     const totalRemainderAmountForDelegators = new BN(0);
     for (const amount of sortedRemainingDelegatorsAmounts) totalRemainderAmountForDelegators.iadd(amount);
 
@@ -231,7 +215,7 @@ export class Distribution {
                 Distribution.granularity
               );
         // add the tx to the batch
-        batch.push({
+        res.push({
           recipientAddresses: [this.history.delegateAddress, ...chunkedDelegatorsAddresses[i]],
           amounts: [amountInTxForDelegate, ...chunkedDelegatorsAmounts[i]],
           totalAmount: totalAmountInTx.add(amountInTxForDelegate),
@@ -244,13 +228,35 @@ export class Distribution {
 
     // handle edge cases like zero remaining delegators
     if (!amountLeftSoFarForDelegate.isZero()) {
-      batch.push({
+      res.push({
         recipientAddresses: [this.history.delegateAddress],
         amounts: [amountLeftSoFarForDelegate],
         totalAmount: amountLeftSoFarForDelegate,
         txIndex: nextTxIndex,
       });
     }
+
+    return res;
+  }
+
+  async sendTransactionBatch(
+    batch: TransactionBatch,
+    numConfirmations?: number,
+    confirmationTimeoutSeconds?: number,
+    progressCallback?: TxProgressNotification
+  ): Promise<{
+    isComplete: boolean;
+    txHashes: string[];
+  }> {
+    if (!numConfirmations && numConfirmations !== 0) {
+      numConfirmations = DEFAULT_NUM_CONFIRMATIONS;
+    }
+    if (!confirmationTimeoutSeconds) {
+      confirmationTimeoutSeconds = DEFAULT_CONFIRMATION_TIMEOUT_SECONDS;
+    }
+
+    // make sure we have anything to send
+    if (batch.length == 0) return { isComplete: true, txHashes: [] };
 
     Logger.log(
       `About to send batch: ${this.firstBlock}-${this.lastBlock} (${

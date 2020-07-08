@@ -74,7 +74,8 @@ describe('resume distribution', () => {
     expect(Object.keys(distribution.division.amountsWithoutDelegate).length).toEqual(4);
 
     // send distribution transactions
-    const { isComplete, txHashes } = await distribution.sendTransactionBatch(10, 1);
+    const batch = distribution.prepareTransactionBatch(10);
+    const { isComplete, txHashes } = await distribution.sendTransactionBatch(batch, 1);
     console.log('txHashes:', txHashes);
     expect(isComplete).toEqual(true);
 

@@ -11,6 +11,13 @@ const GAS_LIMIT_PER_TX = 0x7fffffff; // TODO: improve
 
 export type TxProgressNotification = (progress: number, confirmations: number) => void;
 
+export type TransactionBatch = {
+  recipientAddresses: string[];
+  amounts: BN[];
+  totalAmount: BN;
+  txIndex: number;
+}[];
+
 export class EthereumAdapter {
   private web3?: Web3;
   private contracts: {
@@ -51,12 +58,7 @@ export class EthereumAdapter {
 
   // returns txHashes, but only after numConfirmations is reached
   async sendRewardsTransactionBatch(
-    batch: {
-      recipientAddresses: string[];
-      amounts: BN[];
-      totalAmount: BN;
-      txIndex: number;
-    }[],
+    batch: TransactionBatch,
     fromBlock: number,
     toBlock: number,
     splitFractionForDelegators: number,

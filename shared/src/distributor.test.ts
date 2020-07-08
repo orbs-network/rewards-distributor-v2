@@ -237,7 +237,9 @@ describe('sendTransactionBatch', () => {
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
-    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(10);
+    expect(batch.length).toEqual(1);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).toHaveBeenCalledWith(
       [
         {
@@ -263,7 +265,9 @@ describe('sendTransactionBatch', () => {
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
-    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(10);
+    expect(batch.length).toEqual(1);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).toHaveBeenCalledWith(
       [
         {
@@ -289,7 +293,9 @@ describe('sendTransactionBatch', () => {
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
-    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(10);
+    expect(batch.length).toEqual(1);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).toHaveBeenCalledWith(
       [
         {
@@ -315,7 +321,9 @@ describe('sendTransactionBatch', () => {
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve([]);
     });
-    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(10);
+    expect(batch.length).toEqual(0);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).not.toHaveBeenCalled();
   });
 
@@ -325,7 +333,9 @@ describe('sendTransactionBatch', () => {
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve([]);
     });
-    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(10);
+    expect(batch.length).toEqual(0);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).not.toHaveBeenCalled();
   });
 
@@ -335,7 +345,9 @@ describe('sendTransactionBatch', () => {
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123', '0x456']);
     });
-    expect(await d.sendTransactionBatch(1)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(1);
+    expect(batch.length).toEqual(2);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).toHaveBeenCalledWith(
       [
         {
@@ -367,7 +379,8 @@ describe('sendTransactionBatch', () => {
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(() => {
       throw new Error('network connection error');
     });
-    await expect(d.sendTransactionBatch(10)).rejects.toEqual(new Error('network connection error'));
+    const batch = d.prepareTransactionBatch(10);
+    await expect(d.sendTransactionBatch(batch)).rejects.toEqual(new Error('network connection error'));
     expect(d.ethereum.sendRewardsTransactionBatch).toBeCalledTimes(1);
   });
 
@@ -381,7 +394,9 @@ describe('sendTransactionBatch', () => {
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
-    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(10);
+    expect(batch.length).toEqual(1);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).toHaveBeenCalledWith(
       [
         {
@@ -411,7 +426,9 @@ describe('sendTransactionBatch', () => {
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123', '0x456', '0x789']);
     });
-    expect(await d.sendTransactionBatch(1)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(1);
+    expect(batch.length).toEqual(3);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).toHaveBeenCalledWith(
       [
         {

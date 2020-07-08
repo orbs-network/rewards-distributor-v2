@@ -71,8 +71,9 @@ const progressCallback = (progress: number, confirmations: number) => {
 };
 
 // all arguments are optional and have sensible defaults
+const batch = distribution.prepareTransactionBatch(numRecipientsPerTx);
 const { isComplete, txHashes } = await distribution.sendTransactionBatch(
-  numRecipientsPerTx, 
+  batch, 
   numConfirmations,
   confirmationTimeoutSeconds,
   progressCallback
