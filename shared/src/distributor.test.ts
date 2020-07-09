@@ -70,9 +70,11 @@ describe('getLastDistribution', () => {
 
   it('returns last distribution even when several out of order in one block', () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithSeveralDistributions());
-    expect(d?.firstBlock).toEqual(10);
-    expect(d?.lastBlock).toEqual(15);
-    expect(d?.split).toEqual({ fractionForDelegators: 0.6 });
+    if (d == null) fail();
+    expect(d.firstBlock).toEqual(10);
+    expect(d.lastBlock).toEqual(15);
+    expect(d.split).toEqual({ fractionForDelegators: 0.6 });
+    expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[1], d.history.distributionEvents[2]]);
   });
 });
 
@@ -234,6 +236,7 @@ describe('sendTransactionBatch', () => {
       getHistoryWithUnstartedDistribution()
     );
     if (d == null) fail();
+    expect(d.getPreviousTransfers()).toEqual([]);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
@@ -262,6 +265,7 @@ describe('sendTransactionBatch', () => {
   it('sends only to the remaining recipients if some already received', async () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
+    expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0]]);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
@@ -290,6 +294,7 @@ describe('sendTransactionBatch', () => {
   it('sends residue transaction to delegate if did not distribute everything', async () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithIncompleteNoDelegatorsDistribution());
     if (d == null) fail();
+    expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0]]);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
@@ -318,6 +323,7 @@ describe('sendTransactionBatch', () => {
   it('does not send if no remaining', async () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithCompleteDistribution());
     if (d == null) fail();
+    expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0], d.history.distributionEvents[1]]);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve([]);
     });
@@ -330,6 +336,7 @@ describe('sendTransactionBatch', () => {
   it('does not send if no remaining - no delegators', async () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithCompleteNoDelegatorsDistribution());
     if (d == null) fail();
+    expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0]]);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve([]);
     });
@@ -342,6 +349,7 @@ describe('sendTransactionBatch', () => {
   it('respects limited number of recipients per tx', async () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
+    expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0]]);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123', '0x456']);
     });

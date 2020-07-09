@@ -8,3 +8,5 @@ export interface EthereumContractAddresses {
   Delegations: string;
   Rewards: string;
 }
+
+export { EventHistory } from './model';

@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import * as Logger from './logger';
-import { EventHistory, Split, Division } from './model';
+import { EventHistory, Split, Division, DistributionEvent } from './model';
 import { Calculator } from './calculator';
 import BN from 'bn.js';
 import { EthereumContractAddresses } from '.';
@@ -24,7 +24,7 @@ export class Distribution {
     public firstBlock: number,
     public lastBlock: number,
     public split: Split,
-    private history: EventHistory
+    public history: EventHistory
   ) {
     // before we start the actual distribution, calculate the division of how much to give each delegator
     const accurateDivision = Calculator.calcDivisionForBlockPeriod(firstBlock, lastBlock, split, history);
@@ -56,24 +56,24 @@ export class Distribution {
 
     // find latest distribution, handles edge case where we have multiple out of order distributions in one block
     let index = history.distributionEvents.length - 1;
-    let latestDistribution = history.distributionEvents[index];
-    const latestBlock = latestDistribution.block;
+    let latestDistributionEvent = history.distributionEvents[index];
+    const latestBlock = latestDistributionEvent.block;
     while (index >= 0 && history.distributionEvents[index].block == latestBlock) {
-      if (history.distributionEvents[index].batchLastBlock > latestDistribution.batchLastBlock) {
-        latestDistribution = history.distributionEvents[index];
+      if (history.distributionEvents[index].batchLastBlock > latestDistributionEvent.batchLastBlock) {
+        latestDistributionEvent = history.distributionEvents[index];
       }
       index--;
     }
 
     Logger.log(
-      `Found existing distribution: ${latestDistribution.batchFirstBlock}-${latestDistribution.batchLastBlock} (${latestDistribution.batchSplit.fractionForDelegators}).`
+      `Found existing distribution: ${latestDistributionEvent.batchFirstBlock}-${latestDistributionEvent.batchLastBlock} (${latestDistributionEvent.batchSplit.fractionForDelegators}).`
     );
 
     // return the result
     const res = new Distribution(
-      latestDistribution.batchFirstBlock,
-      latestDistribution.batchLastBlock,
-      latestDistribution.batchSplit,
+      latestDistributionEvent.batchFirstBlock,
+      latestDistributionEvent.batchLastBlock,
+      latestDistributionEvent.batchSplit,
       history
     );
     res.startScanningFromIndex = res._searchForEarliestEventIndex();
@@ -139,27 +139,37 @@ export class Distribution {
     return res;
   }
 
+  // return all transactions (distribution events) that were already sent as part of this distribution
+  getPreviousTransfers(): DistributionEvent[] {
+    const res: DistributionEvent[] = [];
+    for (let index = this.startScanningFromIndex; index < this.history.distributionEvents.length; index++) {
+      const event = this.history.distributionEvents[index];
+      if (event.batchFirstBlock == this.firstBlock && event.batchLastBlock == this.lastBlock) {
+        res.push(event);
+      }
+    }
+    return res;
+  }
+
   // returns all delegators (without the delegate) that were not paid yet
   private _findRemainderToDistribute(): DistributionRemainder {
     const resRemainingDelegators = _.clone(this.division.amountsWithoutDelegate);
     const resRemainingAmountForDelegate = this.division.amountForDelegate.clone();
     let resMaxTxIndex = -1;
-    for (let index = this.startScanningFromIndex; index < this.history.distributionEvents.length; index++) {
-      const event = this.history.distributionEvents[index];
-      if (event.batchFirstBlock == this.firstBlock && event.batchLastBlock == this.lastBlock) {
-        if (event.recipientAddresses[0] != this.history.delegateAddress) {
-          throw new Error(`Corrupt Distribution event ${JSON.stringify(event)} where delegate is not first.`);
-        }
-        resRemainingAmountForDelegate.isub(event.amounts[0]);
-        if (resRemainingAmountForDelegate.isNeg()) {
-          throw new Error(`Remaining amount for delegate is negative after event ${JSON.stringify(event)}.`);
-        }
-        for (let j = 1; j < event.recipientAddresses.length; j++) {
-          delete resRemainingDelegators[event.recipientAddresses[j]];
-        }
-        if (event.batchTxIndex > resMaxTxIndex) {
-          resMaxTxIndex = event.batchTxIndex;
-        }
+    const previousEvents = this.getPreviousTransfers();
+    for (const event of previousEvents) {
+      if (event.recipientAddresses[0] != this.history.delegateAddress) {
+        throw new Error(`Corrupt Distribution event ${JSON.stringify(event)} where delegate is not first.`);
+      }
+      resRemainingAmountForDelegate.isub(event.amounts[0]);
+      if (resRemainingAmountForDelegate.isNeg()) {
+        throw new Error(`Remaining amount for delegate is negative after event ${JSON.stringify(event)}.`);
+      }
+      for (let j = 1; j < event.recipientAddresses.length; j++) {
+        delete resRemainingDelegators[event.recipientAddresses[j]];
+      }
+      if (event.batchTxIndex > resMaxTxIndex) {
+        resMaxTxIndex = event.batchTxIndex;
       }
     }
 
