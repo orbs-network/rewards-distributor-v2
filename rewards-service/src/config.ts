@@ -12,6 +12,7 @@ export interface Configuration {
   DefaultDistributionFrequencySeconds: number;
   EthereumPendingTxPollTimeSeconds: number;
   RewardFractionForDelegators: number;
+  MaxRecipientsPerRewardsTx: number;
   EthereumDiscountGasPriceFactor: number;
   EthereumDiscountTxTimeoutSeconds: number;
   EthereumNonDiscountTxTimeoutSeconds: number;
@@ -26,6 +27,7 @@ export const defaultConfiguration = {
   DefaultDistributionFrequencySeconds: 14 * 24 * 60 * 60,
   EthereumPendingTxPollTimeSeconds: 3 * 60,
   RewardFractionForDelegators: 0.7,
+  MaxRecipientsPerRewardsTx: 40,
   EthereumDiscountGasPriceFactor: 0.6,
   EthereumDiscountTxTimeoutSeconds: 60 * 60,
   EthereumNonDiscountTxTimeoutSeconds: 20 * 60,
@@ -101,6 +103,12 @@ export function validateConfiguration(config: Configuration) {
   }
   if (config.RewardFractionForDelegators < 0 || config.RewardFractionForDelegators > 1) {
     throw new Error(`RewardFractionForDelegators is not in range 0-1.`);
+  }
+  if (!config.MaxRecipientsPerRewardsTx) {
+    throw new Error(`MaxRecipientsPerRewardsTx is empty or zero.`);
+  }
+  if (typeof config.MaxRecipientsPerRewardsTx != 'number') {
+    throw new Error(`MaxRecipientsPerRewardsTx is not a number.`);
   }
   if (!config.EthereumDiscountGasPriceFactor) {
     throw new Error(`EthereumDiscountGasPriceFactor is empty or zero.`);

@@ -8,8 +8,6 @@ import { toNumber } from '../helpers';
 import { sendTransactionBatch, EthereumTxParams } from './send';
 import Signer from 'orbs-signer-client';
 
-const MAX_RECIPIENTS_PER_TX = 40;
-
 export type DistributorConfiguration = EthereumTxParams & {
   EthereumEndpoint: string;
   EthereumDelegationsContract: string;
@@ -18,6 +16,7 @@ export type DistributorConfiguration = EthereumTxParams & {
   EthereumFirstBlock: number;
   DefaultDistributionFrequencySeconds: number;
   RewardFractionForDelegators: number;
+  MaxRecipientsPerRewardsTx: number;
 };
 
 export class Distributor {
@@ -135,7 +134,7 @@ export class Distributor {
 
   async completeDistribution(distribution: Distribution) {
     distribution.setEthereumContracts(this.web3, this.contractAddresses);
-    const batch = distribution.prepareTransactionBatch(MAX_RECIPIENTS_PER_TX);
+    const batch = distribution.prepareTransactionBatch(this.config.MaxRecipientsPerRewardsTx);
     await sendTransactionBatch(batch, distribution, this.signer, this.state, this.config);
   }
 }

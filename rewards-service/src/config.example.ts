@@ -14,6 +14,7 @@ export const exampleConfig: Configuration = {
   DefaultDistributionFrequencySeconds: 14 * 24 * 60 * 60,
   EthereumPendingTxPollTimeSeconds: 3 * 60,
   RewardFractionForDelegators: 0.7,
+  MaxRecipientsPerRewardsTx: 40,
   EthereumDiscountGasPriceFactor: 0.6,
   EthereumDiscountTxTimeoutSeconds: 60 * 60,
   EthereumNonDiscountTxTimeoutSeconds: 20 * 60,

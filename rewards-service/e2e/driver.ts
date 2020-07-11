@@ -15,7 +15,7 @@ export class TestEnvironment {
 
   constructor(private pathToDockerCompose: string) {}
 
-  getAppConfig() {
+  getAppConfig(maxRecipientsPerRewardsTx: number) {
     return {
       EthereumEndpoint: 'http://ganache:7545',
       SignerEndpoint: 'http://signer:7777',
@@ -28,8 +28,9 @@ export class TestEnvironment {
       DistributorWakeIntervalSeconds: 1,
       EthereumFirstBlock: 0,
       DefaultDistributionFrequencySeconds: 5,
-      EthereumPendingTxPollTimeSeconds: 1,
+      EthereumPendingTxPollTimeSeconds: 2,
       RewardFractionForDelegators: 0.7,
+      MaxRecipientsPerRewardsTx: maxRecipientsPerRewardsTx,
       EthereumDiscountGasPriceFactor: 0.6,
       EthereumDiscountTxTimeoutSeconds: 60 * 60,
       EthereumNonDiscountTxTimeoutSeconds: 20 * 60,
@@ -38,7 +39,7 @@ export class TestEnvironment {
   }
 
   // runs all the docker instances with docker-compose
-  launchServices() {
+  launchServices(maxRecipientsPerRewardsTx: number) {
     beforeAll(() => log('[E2E] driver launchServices() start'));
 
     // step 1 - launch ganache docker
@@ -86,7 +87,7 @@ export class TestEnvironment {
       try {
         unlinkSync(configFilePath);
       } catch (err) {}
-      const config = this.getAppConfig();
+      const config = this.getAppConfig(maxRecipientsPerRewardsTx);
       if (require('./signer/keys.json')['node-address'] != config.NodeOrbsAddress) {
         throw new Error(
           `Incorrect address in ./signer/keys.json, use address ${config.NodeOrbsAddress} with private key ${(this
