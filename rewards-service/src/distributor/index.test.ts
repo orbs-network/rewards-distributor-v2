@@ -69,14 +69,17 @@ describe('distributor task', () => {
     const state = new State();
     const distributor = new Distributor(state, getConfiguation(30));
     const oldDistribution = getMockDistribution(false);
+    const nearOldDistributionBlock = getMockBlock(getCurrentClockTime() - 5 * 24 * 60 * 60);
 
     mocked(Distribution).getLastDistribution.mockReturnValue(oldDistribution);
+    mocked(distributor, true).web3.eth.getBlock.mockResolvedValue(nearOldDistributionBlock);
 
     await distributor.run();
 
     expect(mocked(Distribution).getLastDistribution).toHaveBeenCalledTimes(1);
     expect(mocked(Distribution).startNewDistribution).toHaveBeenCalledTimes(0);
     expect(oldDistribution.prepareTransactionBatch).toHaveBeenCalledTimes(1);
+    expect(state.LastDistributions['61-70'].Complete).toEqual(false);
   });
 
   it('does not start a new distribution if EthereumFirstBlock is near (when no previous distributions)', async () => {
@@ -92,6 +95,7 @@ describe('distributor task', () => {
     expect(mocked(Distribution).getLastDistribution).toHaveBeenCalledTimes(1);
     expect(mocked(Distribution).startNewDistribution).toHaveBeenCalledTimes(0);
     expect(mocked(distributor, true).web3.eth.getBlock).toHaveBeenCalledWith(30);
+    expect(state.LastDistributions['genesis'].Complete).toEqual(true);
   });
 
   it('starts a new distribution if EthereumFirstBlock is far (when no previous distributions)', async () => {
@@ -110,6 +114,7 @@ describe('distributor task', () => {
     expect(mocked(Distribution).startNewDistribution).toHaveBeenCalledTimes(1);
     expect(mocked(distributor, true).web3.eth.getBlock).toHaveBeenCalledWith(30);
     expect(newDistribution.prepareTransactionBatch).toHaveBeenCalledTimes(1);
+    expect(state.LastDistributions['genesis'].Complete).toEqual(true);
   });
 
   it('does not start a new distribution if last distribution is near (when last is complete)', async () => {
@@ -126,6 +131,7 @@ describe('distributor task', () => {
     expect(mocked(Distribution).getLastDistribution).toHaveBeenCalledTimes(1);
     expect(mocked(Distribution).startNewDistribution).toHaveBeenCalledTimes(0);
     expect(mocked(distributor, true).web3.eth.getBlock).toHaveBeenCalledWith(70);
+    expect(state.LastDistributions['51-60'].Complete).toEqual(true);
   });
 
   it('starts a new distribution if last distribution is far (when last is complete)', async () => {
@@ -145,5 +151,6 @@ describe('distributor task', () => {
     expect(mocked(Distribution).startNewDistribution).toHaveBeenCalledTimes(1);
     expect(mocked(distributor, true).web3.eth.getBlock).toHaveBeenCalledWith(70);
     expect(newDistribution.prepareTransactionBatch).toHaveBeenCalledTimes(1);
+    expect(state.LastDistributions['51-60'].Complete).toEqual(true);
   });
 });

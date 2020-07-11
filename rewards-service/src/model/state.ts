@@ -8,7 +8,7 @@ export class State {
   EventHistory?: EventHistory;
   DistributionFrequencySeconds = 14 * 24 * 60 * 60;
   TimeToNextDistribution = 0; // seconds
-  LastDistributionsStartTime: { [distributionName: string]: number } = {};
+  LastDistributions: { [distributionName: string]: DistributionStats } = {};
   LastTransactions: EthereumTxStatus[] = [];
 }
 
@@ -17,6 +17,14 @@ export class State {
 export type GasPriceStrategy = 'discount' | 'recommended';
 
 export type TransactionStatus = 'pending' | 'successful' | 'failed-send' | 'timeout' | 'removed-from-pool' | 'revert';
+
+export interface DistributionStats {
+  StartTime: number; // UTC seconds
+  Complete: boolean;
+  NumNonGuardianRecipients: number;
+  TotalNonGuardianAmount: string;
+  TotalGuardianAmount: string;
+}
 
 export interface EthereumTxStatus {
   SendTime: number; // UTC seconds

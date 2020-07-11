@@ -45,7 +45,7 @@ describe('status task', () => {
       HistoryTotalDistributionEvents: 0,
       DistributionFrequencySeconds: 14 * 24 * 60 * 60,
       TimeToNextDistribution: 0,
-      LastDistributionsStartTime: {},
+      LastDistributions: {},
       LastTransactions: [],
       Config: exampleConfig,
     });

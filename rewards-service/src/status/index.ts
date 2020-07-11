@@ -26,7 +26,7 @@ export class StatusWriter {
         HistoryTotalDistributionEvents: this.state.EventHistory?.distributionEvents.length ?? 0,
         DistributionFrequencySeconds: this.state.DistributionFrequencySeconds,
         TimeToNextDistribution: this.state.TimeToNextDistribution,
-        LastDistributionsStartTime: this.state.LastDistributionsStartTime,
+        LastDistributions: this.state.LastDistributions,
         LastTransactions: this.state.LastTransactions,
         Config: this.config,
       },

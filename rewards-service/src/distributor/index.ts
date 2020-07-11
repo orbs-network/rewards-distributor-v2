@@ -3,7 +3,7 @@ import * as Logger from '../logger';
 import { HistoryDownloader, Distribution, EthereumContractAddresses } from 'rewards-v2';
 import Web3 from 'web3';
 import { getCurrentClockTime } from '../helpers';
-import { historyAutoscaleOptions, distributionName } from './helpers';
+import { historyAutoscaleOptions, distributionName, distributionStats } from './helpers';
 import { toNumber } from '../helpers';
 import { sendTransactionBatch, EthereumTxParams } from './send';
 import Signer from 'orbs-signer-client';
@@ -69,9 +69,18 @@ export class Distributor {
     // log progress
     Logger.log(`Distributor: history finished catching up to ethereum latest block ${latestEthereumBlock}.`);
 
-    // see if we have an active distribution that was not completed
+    // get info about the last distribution
     const lastDistribution = Distribution.getLastDistribution(latestEthereumBlock, this.historyDownloader.history);
-    if (lastDistribution != null && !lastDistribution.isDistributionComplete()) {
+    const lastDistributionStartTime = await this.getDistributionStartTime(lastDistribution);
+    const lastDistributionComplete = lastDistribution?.isDistributionComplete() ?? true;
+    this.state.LastDistributions[distributionName(lastDistribution)] = distributionStats(
+      lastDistribution,
+      lastDistributionStartTime,
+      lastDistributionComplete
+    );
+
+    // see if we have an active distribution that was not completed
+    if (lastDistribution != null && !lastDistributionComplete) {
       Logger.log(
         `Distributor: found distribution ${distributionName(lastDistribution)} that is active and incomplete.`
       );
@@ -81,7 +90,6 @@ export class Distributor {
 
     // no active incomplete distributions, is it time to start a new one?
     const now = getCurrentClockTime();
-    const lastDistributionStartTime = await this.getDistributionStartTime(lastDistribution);
     this.state.TimeToNextDistribution = this.state.DistributionFrequencySeconds - (now - lastDistributionStartTime);
     if (this.state.TimeToNextDistribution < 0) this.state.TimeToNextDistribution = 0;
     if (this.state.TimeToNextDistribution == 0) {
@@ -103,8 +111,8 @@ export class Distributor {
   // returns UTC seconds
   async getDistributionStartTime(distribution: Distribution | null): Promise<number> {
     // this operation is a little expensive so cache it
-    const cachedResponse = this.state.LastDistributionsStartTime[distributionName(distribution)];
-    if (cachedResponse) return cachedResponse;
+    const cachedResponse = this.state.LastDistributions[distributionName(distribution)];
+    if (cachedResponse) return cachedResponse.StartTime;
 
     // start by finding out the block number of the first transfer in the distribution
     let firstTxBlock = this.config.EthereumFirstBlock; // init with genesis in case distribution is null
@@ -122,7 +130,6 @@ export class Distributor {
       throw new Error(`Cannot get time of block ${firstTxBlock} belonging to ${distributionName(distribution)}.`);
     }
     const res = toNumber(block.timestamp);
-    this.state.LastDistributionsStartTime[distributionName(distribution)] = res;
     return res;
   }
 
