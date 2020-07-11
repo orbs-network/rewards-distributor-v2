@@ -22,10 +22,18 @@ export class TestEnvironment {
       EthereumDelegationsContract: this.sharedTestkit.ethereumContractAddresses?.Delegations,
       EthereumRewardsContract: this.sharedTestkit.ethereumContractAddresses?.Rewards,
       GuardianAddress: this.sharedTestkit.delegateAddress,
+      NodeOrbsAddress: this.sharedTestkit.delegateOrbsAddress?.substr(2).toLowerCase(), // remove "0x",
       StatusJsonPath: './status/status.json',
       StatusPollTimeSeconds: 1,
-      HistoryPollIntervalSeconds: 1,
+      DistributorWakeIntervalSeconds: 1,
       EthereumFirstBlock: 0,
+      DefaultDistributionFrequencySeconds: 5,
+      EthereumPendingTxPollTimeSeconds: 1,
+      RewardFractionForDelegators: 0.7,
+      EthereumDiscountGasPriceFactor: 0.6,
+      EthereumDiscountTxTimeoutSeconds: 60 * 60,
+      EthereumNonDiscountTxTimeoutSeconds: 20 * 60,
+      EthereumMaxGasPrice: 150000000000, // 150 gwei
     };
   }
 
@@ -34,9 +42,9 @@ export class TestEnvironment {
     beforeAll(() => log('[E2E] driver launchServices() start'));
 
     // step 1 - launch ganache docker
-    beforeAll(() => log('[E2E] launch ganache docker'));
+    beforeAll(() => log('[E2E] launch ganache, signer dockers'));
     this.envName = dockerComposeTool(beforeAll, afterAll, this.pathToDockerCompose, {
-      startOnlyTheseServices: ['ganache'],
+      startOnlyTheseServices: ['ganache', 'signer'],
       containerCleanUp: false,
     } as any);
 
@@ -78,7 +86,16 @@ export class TestEnvironment {
       try {
         unlinkSync(configFilePath);
       } catch (err) {}
-      writeFileSync(configFilePath, JSON.stringify(this.getAppConfig()));
+      const config = this.getAppConfig();
+      if (require('./signer/keys.json')['node-address'] != config.NodeOrbsAddress) {
+        throw new Error(
+          `Incorrect address in ./signer/keys.json, use address ${config.NodeOrbsAddress} with private key ${(this
+            .sharedTestkit.orbsV2Driver!.web3.currentProvider as any).wallets[
+            '0x' + config.NodeOrbsAddress
+          ]._privKey.toString('hex')}`
+        );
+      }
+      writeFileSync(configFilePath, JSON.stringify(config));
     });
 
     // step 5 - launch app docker

@@ -12,9 +12,10 @@ const MONTH_IN_SECONDS = 60 * 60 * 24 * 30;
 
 export class TestkitDriver {
   public web3: Web3;
-  private orbsV2Driver?: OrbsV2Driver;
+  public orbsV2Driver?: OrbsV2Driver;
   public ethereumContractAddresses?: EthereumContractAddresses;
   public delegateAddress?: string;
+  public delegateOrbsAddress?: string;
 
   constructor() {
     this.web3 = new Web3('http://localhost:7545');
@@ -92,6 +93,7 @@ export class TestkitDriver {
 
     // the delegate running the reward distribution code is v2
     this.delegateAddress = v2.address;
+    this.delegateOrbsAddress = v2.orbsAddress;
 
     // assign rewards (TODO: this will become automatic)
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS * 4);

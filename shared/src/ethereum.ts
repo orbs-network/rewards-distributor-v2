@@ -19,8 +19,8 @@ export type TransactionBatch = {
 }[];
 
 export class EthereumAdapter {
-  private web3?: Web3;
-  private contracts: {
+  public web3?: Web3;
+  public contracts: {
     Delegations?: Contract;
     Rewards?: Contract;
   } = {};

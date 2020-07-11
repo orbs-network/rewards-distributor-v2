@@ -1,5 +1,6 @@
+import _ from 'lodash';
 import * as Logger from '../logger';
-import { State } from '../model/state';
+import { State, NUM_LAST_TRANSACTIONS } from '../model/state';
 import { writeFileSync } from 'fs';
 import { ensureFileDirectoryExists, JsonResponse, getCurrentClockTime, sleep } from '../helpers';
 import { Configuration } from '../config';
@@ -21,8 +22,12 @@ export class StatusWriter {
         MemoryBytesUsed: process.memoryUsage().heapUsed,
         HistoryMaxProcessedBlock: this.state.HistoryMaxProcessedBlock,
         LastHistoryBatchTime: this.state.LastHistoryBatchTime,
-        HistoryTotalAssignmentEvents: this.state.HistoryTotalAssignmentEvents,
-        HistoryTotalDistributionEvents: this.state.HistoryTotalDistributionEvents,
+        HistoryTotalAssignmentEvents: this.state.EventHistory?.assignmentEvents.length ?? 0,
+        HistoryTotalDistributionEvents: this.state.EventHistory?.distributionEvents.length ?? 0,
+        DistributionFrequencySeconds: this.state.DistributionFrequencySeconds,
+        TimeToNextDistribution: this.state.TimeToNextDistribution,
+        LastDistributionsStartTime: this.state.LastDistributionsStartTime,
+        LastTransactions: this.state.LastTransactions,
         Config: this.config,
       },
     };
@@ -52,6 +57,10 @@ function getStatusText(state: State) {
   const now = getCurrentClockTime();
   const historyBatchAgo = now - state.LastHistoryBatchTime;
   res.push(`history block = ${state.HistoryMaxProcessedBlock} (updated ${historyBatchAgo} sec ago)`);
+  res.push(`next distribution in ${state.TimeToNextDistribution} sec`);
+  if (state.LastTransactions.length > 0) {
+    res.push(`last tx status = ${state.LastTransactions[state.LastTransactions.length - 1].Status}`);
+  }
   return res.join(', ');
 }
 
@@ -61,6 +70,14 @@ function getErrorText(state: State) {
   const historyBatchAgo = now - state.LastHistoryBatchTime;
   if (historyBatchAgo > HISTORY_BATCH_TIME_ALLOWED_DELAY) {
     res.push(`History last update time is too old (${historyBatchAgo} sec ago).`);
+  }
+  const numUnsuccessfulTx = _.reduce(
+    state.LastTransactions,
+    (sum, tx) => sum + (tx.Status != 'pending' && tx.Status != 'successful' ? 1 : 0),
+    0
+  );
+  if (numUnsuccessfulTx >= Math.round(NUM_LAST_TRANSACTIONS / 2)) {
+    res.push(`Too many unsuccessful transactions (${numUnsuccessfulTx}).`);
   }
   return res.join(' ');
 }

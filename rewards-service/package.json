@@ -51,6 +51,7 @@
     "typescript": "^3.7.5"
   },
   "dependencies": {
+    "bn.js": "^5.1.1",
     "lodash": "^4.17.15",
     "orbs-signer-client": "^1.0.0",
     "rewards-v2": "file:../shared",

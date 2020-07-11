@@ -20,6 +20,12 @@ export function getCurrentClockTime() {
   return Math.round(new Date().getTime() / 1000);
 }
 
+export function toNumber(val: number | string) {
+  if (typeof val == 'string') {
+    return parseInt(val);
+  } else return val;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type JsonResponse = any;
 
