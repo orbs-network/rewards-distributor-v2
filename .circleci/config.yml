@@ -46,6 +46,7 @@ jobs:
           path: ./shared/_out
       - store_artifacts:
           path: ./shared/_out
+
   test-rewards-service:
     machine: true
     steps:
@@ -87,8 +88,60 @@ jobs:
           path: ./rewards-service/_out
       - store_artifacts:
           path: ./rewards-service/_out
+
+  build-and-release-to-staging-rewards-service:
+    machine: true
+    steps:
+        - checkout
+        - node/install:
+            node-version: '12.13.0'
+        - docker/install-docker
+        - run: ./rewards-service/boyar/create-version-file.sh
+        - run:
+            working_directory: ./shared
+            command: npm install && npm run build
+        - run:
+            working_directory: ./rewards-service
+            command: npm install && npm run build
+        - run:
+            working_directory: ./rewards-service
+            command: ./boyar/create-version-file.sh
+        - run:
+            working_directory: ./rewards-service
+            command: ./boyar/docker-build.sh
+        - run: ./.circleci/rewards-service/release-to-staging.sh
+
+  build-and-release-rewards-service:
+    machine: true
+    steps:
+        - checkout
+        - node/install:
+            node-version: '12.13.0'
+        - docker/install-docker
+        - run: ./rewards-service/boyar/create-version-file.sh
+        - run:
+            working_directory: ./shared
+            command: npm install && npm run build
+        - run:
+            working_directory: ./rewards-service
+            command: npm install && npm run build
+        - run:
+            working_directory: ./rewards-service
+            command: ./boyar/create-version-file.sh
+        - run:
+            working_directory: ./rewards-service
+            command: ./boyar/docker-build.sh
+        - run: ./.circleci/rewards-service/release.sh
+
 workflows:
   build-and-test:
     jobs:
       - test-shared
       - test-rewards-service
+      - build-and-release-to-staging-rewards-service
+      - build-and-release-rewards-service:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              only: master
