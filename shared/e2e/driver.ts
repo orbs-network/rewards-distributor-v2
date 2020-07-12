@@ -12,9 +12,10 @@ const MONTH_IN_SECONDS = 60 * 60 * 24 * 30;
 
 export class TestkitDriver {
   public web3: Web3;
-  private orbsV2Driver?: OrbsV2Driver;
+  public orbsV2Driver?: OrbsV2Driver;
   public ethereumContractAddresses?: EthereumContractAddresses;
   public delegateAddress?: string;
+  public delegateOrbsAddress?: string;
 
   constructor() {
     this.web3 = new Web3('http://localhost:7545');
@@ -28,7 +29,6 @@ export class TestkitDriver {
     if (customWeb3Provider) options.web3Provider = customWeb3Provider;
     this.orbsV2Driver = await OrbsV2Driver.new(options);
     this.ethereumContractAddresses = {
-      Committee: this.orbsV2Driver.committee.address,
       Delegations: this.orbsV2Driver.delegations.address,
       Rewards: this.orbsV2Driver.rewards.address,
     };
@@ -93,6 +93,7 @@ export class TestkitDriver {
 
     // the delegate running the reward distribution code is v2
     this.delegateAddress = v2.address;
+    this.delegateOrbsAddress = v2.orbsAddress;
 
     // assign rewards (TODO: this will become automatic)
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS * 4);
@@ -153,6 +154,12 @@ export class TestkitDriver {
   async getCurrentRewardBalance(delegateAddress: string): Promise<BN> {
     const res = await this.orbsV2Driver?.rewards.getStakingRewardBalance(delegateAddress);
     return new BN(res!);
+  }
+
+  async getCurrentBlock(): Promise<number> {
+    const d = this.orbsV2Driver;
+    if (!d) throw new Error(`Call deployOrbsV2Contracts before getCurrentBlock.`);
+    return await d.web3.eth.getBlockNumber();
   }
 }
 

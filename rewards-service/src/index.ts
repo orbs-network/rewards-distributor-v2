@@ -1,35 +1,24 @@
 import * as Logger from './logger';
-import { sleep } from './helpers';
 import { Configuration } from './config';
-import { writeStatusToDisk } from './write/status';
+import { StatusWriter } from './status';
+import { Distributor } from './distributor';
+import { TaskLoop } from './task-loop';
+import { State } from './model/state';
 
-export class State {
-  temp = 17;
-}
+export function run(config: Configuration) {
+  const state = new State();
+  const statusWriter = new StatusWriter(state, config);
+  const distributor = new Distributor(state, config);
 
-// runs every 10 seconds in prod, 1 second in tests
-async function runLoopTick(config: Configuration, state: State) {
-  Logger.log('Run loop waking up.');
+  const statusWriterTask = new TaskLoop(() => statusWriter.run(), config.StatusPollTimeSeconds * 1000);
+  const distributorTask = new TaskLoop(() => distributor.run(), config.DistributorWakeIntervalSeconds * 1000);
+  statusWriterTask.start();
+  distributorTask.start();
 
-  await sleep(0); // temp
-
-  // write status.json file, we don't mind doing this often (10s)
-  writeStatusToDisk(config.StatusJsonPath, state, config);
-}
-
-export async function runLoop(config: Configuration) {
-  const state = initializeState(config);
-  for (;;) {
-    try {
-      await sleep(config.RunLoopPollTimeSeconds * 1000);
-      await runLoopTick(config, state);
-    } catch (err) {
-      Logger.log('Exception thrown during runLoop, going back to sleep:');
-      Logger.error(err.stack);
-    }
-  }
-}
-
-function initializeState(config: Configuration): State {
-  return new State();
+  process.on('SIGINT', function () {
+    Logger.log('Received SIGINT, shutting down.');
+    statusWriterTask.stop();
+    distributorTask.stop();
+    process.exit();
+  });
 }

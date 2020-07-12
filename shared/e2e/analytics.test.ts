@@ -47,7 +47,6 @@ describe('analytics', () => {
       expect(delegateHistory.delegateAddress).toEqual(delegateAddress);
       expect(delegateHistory.startingBlock).toEqual(0);
       expect(delegateHistory.lastProcessedBlock).toEqual(latestEthereumBlock);
-      expect(delegateHistory.committeeSnapshotEvents.length).toBeGreaterThan(0);
       expect(delegateHistory.delegationChangeEvents.length).toBeGreaterThan(0);
       expect(delegateHistory.delegationChangeEvents[0].delegatorAddress).toEqual(delegateAddress);
     }

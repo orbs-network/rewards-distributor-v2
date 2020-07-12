@@ -1,5 +1,5 @@
 import { EventHistory } from './model';
-import { CommitteeAccumulator, DelegationsAccumulator } from './event-accumulator';
+import { DelegationsAccumulator } from './event-accumulator';
 import BN from 'bn.js';
 
 const getEmptyBlockHistory = (size: number) => {
@@ -7,59 +7,6 @@ const getEmptyBlockHistory = (size: number) => {
   h.lastProcessedBlock = size;
   return h;
 };
-
-const getHistoryWithCommitteeChanges = () => {
-  const h = new EventHistory('G1', 0);
-  h.committeeSnapshotEvents.push({ block: 2, newRelativeWeightInCommittee: 0.5 });
-  h.committeeSnapshotEvents.push({ block: 4, newRelativeWeightInCommittee: 0.3 });
-  h.committeeSnapshotEvents.push({ block: 5, newRelativeWeightInCommittee: 0.7 });
-  h.committeeSnapshotEvents.push({ block: 8, newRelativeWeightInCommittee: 0.1 });
-  h.committeeSnapshotEvents.push({ block: 8, newRelativeWeightInCommittee: 0.2 });
-  h.lastProcessedBlock = 10;
-  return h;
-};
-
-describe('CommitteeAccumulator', () => {
-  it('fails if out of bounds', () => {
-    const a = new CommitteeAccumulator(getEmptyBlockHistory(10));
-    expect(() => {
-      a.forBlock(11);
-    }).toThrow();
-  });
-
-  it('returns zero if no events', () => {
-    const a = new CommitteeAccumulator(getEmptyBlockHistory(10));
-    expect(a.forBlock(6)).toEqual(0);
-  });
-
-  it('returns correct value when reached', () => {
-    const a = new CommitteeAccumulator(getHistoryWithCommitteeChanges());
-    expect(a.forBlock(1)).toEqual(0);
-    expect(a.forBlock(2)).toEqual(0.5);
-    expect(a.forBlock(3)).toEqual(0.5);
-    expect(a.forBlock(4)).toEqual(0.3);
-    expect(a.forBlock(5)).toEqual(0.7);
-    expect(a.forBlock(6)).toEqual(0.7);
-    expect(a.forBlock(7)).toEqual(0.7);
-    expect(a.forBlock(8)).toEqual(0.2);
-    expect(a.forBlock(9)).toEqual(0.2);
-  });
-
-  it('returns same value when called multiple times on same block', () => {
-    const a = new CommitteeAccumulator(getHistoryWithCommitteeChanges());
-    expect(a.forBlock(6)).toEqual(0.7);
-    expect(a.forBlock(6)).toEqual(0.7);
-    expect(a.forBlock(6)).toEqual(0.7);
-  });
-
-  it('fails if going backwards in blocks', () => {
-    const a = new CommitteeAccumulator(getHistoryWithCommitteeChanges());
-    expect(a.forBlock(5)).toEqual(0.7);
-    expect(() => {
-      a.forBlock(4);
-    }).toThrow();
-  });
-});
 
 const getHistoryWithDelegationChanges = () => {
   const h = new EventHistory('G1', 0);

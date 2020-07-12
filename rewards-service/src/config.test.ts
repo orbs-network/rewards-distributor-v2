@@ -23,15 +23,15 @@ describe('validateConfiguration', () => {
 
   it('fails on invalid NodeOrbsAddress', () => {
     const invalidConfig = _.cloneDeep(exampleConfig);
-    invalidConfig.DelegateAddress = 'hello world';
+    invalidConfig.GuardianAddress = 'hello world';
     expect(() => validateConfiguration(invalidConfig)).toThrow();
-    invalidConfig.DelegateAddress = '11f4d0a3c12e86b4b5f39b213f7e19d048276dae'; // should start with "0x"
+    invalidConfig.GuardianAddress = '11f4d0a3c12e86b4b5f39b213f7e19d048276dae'; // should start with "0x"
     expect(() => validateConfiguration(invalidConfig)).toThrow();
   });
 
   it('fails when string given instead of number', () => {
     const invalidConfig = JSON.parse(JSON.stringify(exampleConfig));
-    invalidConfig.RunLoopPollTimeSeconds = '99'; // as string
+    invalidConfig.StatusPollTimeSeconds = '99'; // as string
     expect(() => validateConfiguration(invalidConfig)).toThrow();
   });
 });

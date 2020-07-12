@@ -50,7 +50,6 @@ describe('autoscale', () => {
     expect(historyDownloader.history.delegateAddress).toEqual(driver.delegateAddress);
     expect(historyDownloader.history.startingBlock).toEqual(0);
     expect(historyDownloader.history.lastProcessedBlock).toEqual(latestEthereumBlock);
-    expect(historyDownloader.history.committeeSnapshotEvents.length).toBeGreaterThan(0);
     expect(historyDownloader.history.delegationChangeEvents.length).toBeGreaterThan(0);
     expect(historyDownloader.history.delegationChangeEvents[0].delegatorAddress).toEqual(driver.delegateAddress);
     expect(historyDownloader.history.assignmentEvents.length).toBeGreaterThan(0);

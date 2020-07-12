@@ -15,27 +15,37 @@ export class TestEnvironment {
 
   constructor(private pathToDockerCompose: string) {}
 
-  getAppConfig() {
+  getAppConfig(maxRecipientsPerRewardsTx: number) {
     return {
       EthereumEndpoint: 'http://ganache:7545',
       SignerEndpoint: 'http://signer:7777',
-      EthereumCommitteeContract: this.sharedTestkit.ethereumContractAddresses?.Committee,
       EthereumDelegationsContract: this.sharedTestkit.ethereumContractAddresses?.Delegations,
       EthereumRewardsContract: this.sharedTestkit.ethereumContractAddresses?.Rewards,
-      DelegateAddress: this.sharedTestkit.delegateAddress,
+      GuardianAddress: this.sharedTestkit.delegateAddress,
+      NodeOrbsAddress: this.sharedTestkit.delegateOrbsAddress?.substr(2).toLowerCase(), // remove "0x",
       StatusJsonPath: './status/status.json',
-      RunLoopPollTimeSeconds: 1,
+      StatusPollTimeSeconds: 1,
+      DistributorWakeIntervalSeconds: 1,
+      EthereumFirstBlock: 0,
+      DefaultDistributionFrequencySeconds: 5,
+      EthereumPendingTxPollTimeSeconds: 2,
+      RewardFractionForDelegators: 0.7,
+      MaxRecipientsPerRewardsTx: maxRecipientsPerRewardsTx,
+      EthereumDiscountGasPriceFactor: 0.6,
+      EthereumDiscountTxTimeoutSeconds: 4 * 60 * 60,
+      EthereumNonDiscountTxTimeoutSeconds: 20 * 60,
+      EthereumMaxGasPrice: 100000000000, // 100 gwei
     };
   }
 
   // runs all the docker instances with docker-compose
-  launchServices() {
-    log('[E2E] driver launchServices() start');
+  launchServices(maxRecipientsPerRewardsTx: number) {
+    beforeAll(() => log('[E2E] driver launchServices() start'));
 
     // step 1 - launch ganache docker
-    log('[E2E] launch ganache docker');
+    beforeAll(() => log('[E2E] launch ganache, signer dockers'));
     this.envName = dockerComposeTool(beforeAll, afterAll, this.pathToDockerCompose, {
-      startOnlyTheseServices: ['ganache'],
+      startOnlyTheseServices: ['ganache', 'signer'],
       containerCleanUp: false,
     } as any);
 
@@ -63,6 +73,11 @@ export class TestEnvironment {
       });
       log('[E2E] ethereum PoS contracts deployed');
       await this.sharedTestkit.prepareScenario();
+      log('[E2E] delegate address: ' + this.sharedTestkit.delegateAddress);
+    });
+
+    afterAll(async () => {
+      await this.sharedTestkit.closeConnections();
     });
 
     // step 4 - write config file for app
@@ -72,11 +87,20 @@ export class TestEnvironment {
       try {
         unlinkSync(configFilePath);
       } catch (err) {}
-      writeFileSync(configFilePath, JSON.stringify(this.getAppConfig()));
+      const config = this.getAppConfig(maxRecipientsPerRewardsTx);
+      if (require('./signer/keys.json')['node-address'] != config.NodeOrbsAddress) {
+        throw new Error(
+          `Incorrect address in ./signer/keys.json, use address ${config.NodeOrbsAddress} with private key ${(this
+            .sharedTestkit.orbsV2Driver!.web3.currentProvider as any).wallets[
+            '0x' + config.NodeOrbsAddress
+          ]._privKey.toString('hex')}`
+        );
+      }
+      writeFileSync(configFilePath, JSON.stringify(config));
     });
 
     // step 5 - launch app docker
-    log('[E2E] launch app docker');
+    beforeAll(() => log('[E2E] launch app docker'));
     dockerComposeTool(beforeAll, afterAll, this.pathToDockerCompose, {
       envName: this.envName,
       startOnlyTheseServices: ['app'],
@@ -105,7 +129,7 @@ export class TestEnvironment {
       });
     });
 
-    log('[E2E] driver launchServices() finished');
+    beforeAll(() => log('[E2E] driver launchServices() finished'));
   }
 
   // inspired by https://github.com/applitools/docker-compose-mocha/blob/master/lib/get-logs-for-service.js

@@ -70,9 +70,11 @@ describe('getLastDistribution', () => {
 
   it('returns last distribution even when several out of order in one block', () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithSeveralDistributions());
-    expect(d?.firstBlock).toEqual(10);
-    expect(d?.lastBlock).toEqual(15);
-    expect(d?.split).toEqual({ fractionForDelegators: 0.6 });
+    if (d == null) fail();
+    expect(d.firstBlock).toEqual(10);
+    expect(d.lastBlock).toEqual(15);
+    expect(d.split).toEqual({ fractionForDelegators: 0.6 });
+    expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[1], d.history.distributionEvents[2]]);
   });
 });
 
@@ -97,7 +99,6 @@ const getHistoryWithCompleteDistribution = () => {
     batchSplit: { fractionForDelegators: 0.5 },
   });
   h.assignmentEvents.push({ block: 5, amount: new BN(1200) });
-  h.committeeSnapshotEvents.push({ block: 1, newRelativeWeightInCommittee: 0.5 });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D1', newDelegatedStake: new BN(1000) });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D2', newDelegatedStake: new BN(2000) });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D3', newDelegatedStake: new BN(3000) });
@@ -117,7 +118,6 @@ const getHistoryWithIncompleteDistribution = () => {
     batchSplit: { fractionForDelegators: 0.5 },
   });
   h.assignmentEvents.push({ block: 5, amount: new BN(1200) });
-  h.committeeSnapshotEvents.push({ block: 1, newRelativeWeightInCommittee: 0.5 });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D1', newDelegatedStake: new BN(1000) });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D2', newDelegatedStake: new BN(2000) });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D3', newDelegatedStake: new BN(3000) });
@@ -137,7 +137,6 @@ const getHistoryWithCompleteNoDelegatorsDistribution = () => {
     batchSplit: { fractionForDelegators: 0.5 },
   });
   h.assignmentEvents.push({ block: 5, amount: new BN(600) });
-  h.committeeSnapshotEvents.push({ block: 1, newRelativeWeightInCommittee: 0.5 });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'G1', newDelegatedStake: new BN(1000) });
   h.lastProcessedBlock = 20;
   return h;
@@ -155,7 +154,6 @@ const getHistoryWithIncompleteNoDelegatorsDistribution = () => {
     batchSplit: { fractionForDelegators: 0.5 },
   });
   h.assignmentEvents.push({ block: 5, amount: new BN(600) });
-  h.committeeSnapshotEvents.push({ block: 1, newRelativeWeightInCommittee: 0.5 });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'G1', newDelegatedStake: new BN(1000) });
   h.lastProcessedBlock = 20;
   return h;
@@ -219,7 +217,6 @@ describe('startNewDistribution', () => {
 const getHistoryWithUnstartedDistribution = () => {
   const h = new EventHistory('G1', 1);
   h.assignmentEvents.push({ block: 5, amount: new BN(1200) });
-  h.committeeSnapshotEvents.push({ block: 1, newRelativeWeightInCommittee: 0.5 });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D1', newDelegatedStake: new BN(1000) });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D2', newDelegatedStake: new BN(2000) });
   h.delegationChangeEvents.push({ block: 1, delegatorAddress: 'D3', newDelegatedStake: new BN(3000) });
@@ -239,10 +236,13 @@ describe('sendTransactionBatch', () => {
       getHistoryWithUnstartedDistribution()
     );
     if (d == null) fail();
+    expect(d.getPreviousTransfers()).toEqual([]);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
-    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(10);
+    expect(batch.length).toEqual(1);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).toHaveBeenCalledWith(
       [
         {
@@ -265,10 +265,13 @@ describe('sendTransactionBatch', () => {
   it('sends only to the remaining recipients if some already received', async () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
+    expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0]]);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
-    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(10);
+    expect(batch.length).toEqual(1);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).toHaveBeenCalledWith(
       [
         {
@@ -291,10 +294,13 @@ describe('sendTransactionBatch', () => {
   it('sends residue transaction to delegate if did not distribute everything', async () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithIncompleteNoDelegatorsDistribution());
     if (d == null) fail();
+    expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0]]);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
-    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(10);
+    expect(batch.length).toEqual(1);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).toHaveBeenCalledWith(
       [
         {
@@ -317,30 +323,39 @@ describe('sendTransactionBatch', () => {
   it('does not send if no remaining', async () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithCompleteDistribution());
     if (d == null) fail();
+    expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0], d.history.distributionEvents[1]]);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve([]);
     });
-    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(10);
+    expect(batch.length).toEqual(0);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).not.toHaveBeenCalled();
   });
 
   it('does not send if no remaining - no delegators', async () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithCompleteNoDelegatorsDistribution());
     if (d == null) fail();
+    expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0]]);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve([]);
     });
-    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(10);
+    expect(batch.length).toEqual(0);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).not.toHaveBeenCalled();
   });
 
   it('respects limited number of recipients per tx', async () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
+    expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0]]);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123', '0x456']);
     });
-    expect(await d.sendTransactionBatch(1)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(1);
+    expect(batch.length).toEqual(2);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).toHaveBeenCalledWith(
       [
         {
@@ -372,7 +387,8 @@ describe('sendTransactionBatch', () => {
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(() => {
       throw new Error('network connection error');
     });
-    await expect(d.sendTransactionBatch(10)).rejects.toEqual(new Error('network connection error'));
+    const batch = d.prepareTransactionBatch(10);
+    await expect(d.sendTransactionBatch(batch)).rejects.toEqual(new Error('network connection error'));
     expect(d.ethereum.sendRewardsTransactionBatch).toBeCalledTimes(1);
   });
 
@@ -386,7 +402,9 @@ describe('sendTransactionBatch', () => {
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
-    expect(await d.sendTransactionBatch(10)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(10);
+    expect(batch.length).toEqual(1);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).toHaveBeenCalledWith(
       [
         {
@@ -416,7 +434,9 @@ describe('sendTransactionBatch', () => {
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123', '0x456', '0x789']);
     });
-    expect(await d.sendTransactionBatch(1)).toHaveProperty('isComplete', true);
+    const batch = d.prepareTransactionBatch(1);
+    expect(batch.length).toEqual(3);
+    expect(await d.sendTransactionBatch(batch)).toHaveProperty('isComplete', true);
     expect(d.ethereum.sendRewardsTransactionBatch).toHaveBeenCalledWith(
       [
         {

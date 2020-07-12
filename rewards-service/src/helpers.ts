@@ -2,6 +2,11 @@ import _ from 'lodash';
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function errorString(e: any) {
+  return (e && e.stack) || '' + e;
+}
+
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -13,6 +18,12 @@ export function ensureFileDirectoryExists(filePath: string) {
 // returns UTC clock time in seconds (similar to unix timestamp / Ethereum block time / RefTime)
 export function getCurrentClockTime() {
   return Math.round(new Date().getTime() / 1000);
+}
+
+export function toNumber(val: number | string) {
+  if (typeof val == 'string') {
+    return parseInt(val);
+  } else return val;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

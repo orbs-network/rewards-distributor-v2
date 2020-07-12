@@ -1,17 +1,37 @@
 export interface Configuration {
   EthereumEndpoint: string;
   SignerEndpoint: string;
-  EthereumCommitteeContract: string;
   EthereumDelegationsContract: string;
   EthereumRewardsContract: string;
-  DelegateAddress: string;
+  GuardianAddress: string;
+  NodeOrbsAddress: string;
   StatusJsonPath: string;
-  RunLoopPollTimeSeconds: number;
+  StatusPollTimeSeconds: number;
+  DistributorWakeIntervalSeconds: number;
+  EthereumFirstBlock: number;
+  DefaultDistributionFrequencySeconds: number;
+  EthereumPendingTxPollTimeSeconds: number;
+  RewardFractionForDelegators: number;
+  MaxRecipientsPerRewardsTx: number;
+  EthereumDiscountGasPriceFactor: number;
+  EthereumDiscountTxTimeoutSeconds: number;
+  EthereumNonDiscountTxTimeoutSeconds: number;
+  EthereumMaxGasPrice: number;
 }
 
 export const defaultConfiguration = {
   StatusJsonPath: './status/status.json',
-  RunLoopPollTimeSeconds: 20,
+  StatusPollTimeSeconds: 20,
+  DistributorWakeIntervalSeconds: 5 * 60,
+  EthereumFirstBlock: 0,
+  DefaultDistributionFrequencySeconds: 14 * 24 * 60 * 60,
+  EthereumPendingTxPollTimeSeconds: 3 * 60,
+  RewardFractionForDelegators: 0.7,
+  MaxRecipientsPerRewardsTx: 50,
+  EthereumDiscountGasPriceFactor: 0.6,
+  EthereumDiscountTxTimeoutSeconds: 4 * 60 * 60,
+  EthereumNonDiscountTxTimeoutSeconds: 20 * 60,
+  EthereumMaxGasPrice: 100000000000, // 100 gwei
 };
 
 export function validateConfiguration(config: Configuration) {
@@ -20,12 +40,6 @@ export function validateConfiguration(config: Configuration) {
   }
   if (!config.SignerEndpoint) {
     throw new Error(`SignerEndpoint is empty in config.`);
-  }
-  if (!config.EthereumCommitteeContract) {
-    throw new Error(`EthereumCommitteeContract is empty in config.`);
-  }
-  if (!config.EthereumCommitteeContract.startsWith('0x')) {
-    throw new Error(`EthereumCommitteeContract does not start with "0x".`);
   }
   if (!config.EthereumDelegationsContract) {
     throw new Error(`EthereumDelegationsContract is empty in config.`);
@@ -39,22 +53,85 @@ export function validateConfiguration(config: Configuration) {
   if (!config.EthereumRewardsContract.startsWith('0x')) {
     throw new Error(`EthereumRewardsContract does not start with "0x".`);
   }
-  if (!config.DelegateAddress) {
-    throw new Error(`DelegateAddress is empty in config.`);
+  if (!config.GuardianAddress) {
+    throw new Error(`GuardianAddress is empty in config.`);
   }
-  if (!config.DelegateAddress.startsWith('0x')) {
-    throw new Error(`DelegateAddress does not start with "0x".`);
+  if (!config.GuardianAddress.startsWith('0x')) {
+    throw new Error(`GuardianAddress does not start with "0x".`);
   }
-  if (config.DelegateAddress.length != '0x16fcF728F8dc3F687132f2157D8379c021a08C12'.length) {
-    throw new Error(`DelegateAddress has incorrect length: ${config.DelegateAddress.length}.`);
+  if (!config.NodeOrbsAddress) {
+    throw new Error(`NodeOrbsAddress is empty in config.`);
+  }
+  if (config.NodeOrbsAddress.startsWith('0x')) {
+    throw new Error(`NodeOrbsAddress must not start with "0x".`);
+  }
+  if (config.GuardianAddress.length != '0x16fcF728F8dc3F687132f2157D8379c021a08C12'.length) {
+    throw new Error(`GuardianAddress has incorrect length: ${config.GuardianAddress.length}.`);
   }
   if (!config.StatusJsonPath) {
     throw new Error(`StatusJsonPath is empty in config.`);
   }
-  if (!config.RunLoopPollTimeSeconds) {
-    throw new Error(`RunLoopPollTimeSeconds is empty or zero.`);
+  if (!config.StatusPollTimeSeconds) {
+    throw new Error(`StatusPollTimeSeconds is empty or zero.`);
   }
-  if (typeof config.RunLoopPollTimeSeconds != 'number') {
-    throw new Error(`RunLoopPollTimeSeconds is not a number.`);
+  if (typeof config.StatusPollTimeSeconds != 'number') {
+    throw new Error(`StatusPollTimeSeconds is not a number.`);
+  }
+  if (!config.DistributorWakeIntervalSeconds) {
+    throw new Error(`DistributorWakeIntervalSeconds is empty or zero.`);
+  }
+  if (typeof config.DistributorWakeIntervalSeconds != 'number') {
+    throw new Error(`DistributorWakeIntervalSeconds is not a number.`);
+  }
+  if (typeof config.EthereumFirstBlock != 'number') {
+    throw new Error(`EthereumFirstBlock is not a number.`);
+  }
+  if (!config.DefaultDistributionFrequencySeconds) {
+    throw new Error(`DefaultDistributionFrequencySeconds is empty or zero.`);
+  }
+  if (typeof config.DefaultDistributionFrequencySeconds != 'number') {
+    throw new Error(`DefaultDistributionFrequencySeconds is not a number.`);
+  }
+  if (!config.EthereumPendingTxPollTimeSeconds) {
+    throw new Error(`EthereumPendingTxPollTimeSeconds is empty or zero.`);
+  }
+  if (typeof config.EthereumPendingTxPollTimeSeconds != 'number') {
+    throw new Error(`EthereumPendingTxPollTimeSeconds is not a number.`);
+  }
+  if (typeof config.RewardFractionForDelegators != 'number') {
+    throw new Error(`RewardFractionForDelegators is not a number.`);
+  }
+  if (config.RewardFractionForDelegators < 0 || config.RewardFractionForDelegators > 1) {
+    throw new Error(`RewardFractionForDelegators is not in range 0-1.`);
+  }
+  if (!config.MaxRecipientsPerRewardsTx) {
+    throw new Error(`MaxRecipientsPerRewardsTx is empty or zero.`);
+  }
+  if (typeof config.MaxRecipientsPerRewardsTx != 'number') {
+    throw new Error(`MaxRecipientsPerRewardsTx is not a number.`);
+  }
+  if (!config.EthereumDiscountGasPriceFactor) {
+    throw new Error(`EthereumDiscountGasPriceFactor is empty or zero.`);
+  }
+  if (typeof config.EthereumDiscountGasPriceFactor != 'number') {
+    throw new Error(`EthereumDiscountGasPriceFactor is not a number.`);
+  }
+  if (!config.EthereumDiscountTxTimeoutSeconds) {
+    throw new Error(`EthereumDiscountTxTimeoutSeconds is empty or zero.`);
+  }
+  if (typeof config.EthereumDiscountTxTimeoutSeconds != 'number') {
+    throw new Error(`EthereumDiscountTxTimeoutSeconds is not a number.`);
+  }
+  if (!config.EthereumNonDiscountTxTimeoutSeconds) {
+    throw new Error(`EthereumNonDiscountTxTimeoutSeconds is empty or zero.`);
+  }
+  if (typeof config.EthereumNonDiscountTxTimeoutSeconds != 'number') {
+    throw new Error(`EthereumNonDiscountTxTimeoutSeconds is not a number.`);
+  }
+  if (!config.EthereumMaxGasPrice) {
+    throw new Error(`EthereumMaxGasPrice is empty or zero.`);
+  }
+  if (typeof config.EthereumMaxGasPrice != 'number') {
+    throw new Error(`EthereumMaxGasPrice is not a number.`);
   }
 }

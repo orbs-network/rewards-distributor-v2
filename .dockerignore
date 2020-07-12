@@ -1,0 +1,10 @@
+rewards-ui
+rewards-service/src
+shared/src
+.vscode
+.circleci
+**/node_modules
+**/npm-debug.log
+**/_out
+**/dist/src/*.test.*
+**/dist/e2e/*.test.*

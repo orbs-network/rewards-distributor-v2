@@ -38,6 +38,14 @@ export function isValidEthereumAddress(str: string) {
   return str && str.startsWith('0x') && str.length == '0x5cd0D270C30EDa5ADa6b45a5289AFF1D425759b3'.length;
 }
 
+export function isValidTxHash(str: string) {
+  return (
+    str &&
+    str.startsWith('0x') &&
+    str.length == '0x31bf6c331b6b98fd855a8719c972183a06aa4b89061df3b80a830929314787ce'.length
+  );
+}
+
 export function isValidImageVersion(str: string) {
   return str && str.startsWith('v') && str.split('.').length == 3;
 }
@@ -60,4 +68,8 @@ export function isNonEmptyString(str: string) {
 
 export function isPositiveNumber(str: string) {
   return str && parseInt(str) > 0;
+}
+
+export function isNumber(str: string) {
+  return !isNaN(parseFloat(str));
 }

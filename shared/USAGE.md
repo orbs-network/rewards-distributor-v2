@@ -17,7 +17,6 @@ const historyDownloader = new HistoryDownloader(guardianAddress, genesisBlockNum
 
 // enter the correct contracts addresses here
 historyDownloader.setEthereumContracts(web3, {
-  Committee: '0x550f66F3248aa594376638277F0290D462C9Df9E',
   Delegations: '0x6333c9549095651fCc8252345d6898208eBE8aaa',
   Rewards: '0x87ed2d308D30EE8c170627aCdc54d6d75CaB6bDc'
 });
@@ -47,7 +46,7 @@ const split = { fractionForDelegators: 0.7 }; // delegate gives 70% to delegator
 
 // we may have an unfinished one that we must finish
 let distribution = Distribution.getLastDistribution(latestEthereumBlock, history);
-if (distribution == null) {
+if (distribution == null || distribution.isDistributionComplete()) {
   distribution = Distribution.startNewDistribution(latestEthereumBlock, split, history);
 }
 
@@ -72,8 +71,14 @@ const progressCallback = (progress: number, confirmations: number) => {
 };
 
 // all arguments are optional and have sensible defaults
+const batch = distribution.prepareTransactionBatch(numRecipientsPerTx);
+
+// present the intended transactions we want to send
+console.log(batch);
+
+// do the actual sending
 const { isComplete, txHashes } = await distribution.sendTransactionBatch(
-  numRecipientsPerTx, 
+  batch, 
   numConfirmations,
   confirmationTimeoutSeconds,
   progressCallback

@@ -1,12 +1,12 @@
 import _ from 'lodash';
 import * as Logger from './logger';
-import { EventHistory, Split, Division } from './model';
+import { EventHistory, Split, Division, DistributionEvent } from './model';
 import { Calculator } from './calculator';
 import BN from 'bn.js';
 import { EthereumContractAddresses } from '.';
 import Web3 from 'web3';
 import { bnAddZeroes } from './helpers';
-import { EthereumAdapter, TxProgressNotification } from './ethereum';
+import { EthereumAdapter, TransactionBatch, TxProgressNotification } from './ethereum';
 
 const DEFAULT_NUM_RECIPIENTS_PER_TX = 10; // without the delegate
 const DEFAULT_NUM_CONFIRMATIONS = 4;
@@ -24,7 +24,7 @@ export class Distribution {
     public firstBlock: number,
     public lastBlock: number,
     public split: Split,
-    private history: EventHistory
+    public history: EventHistory
   ) {
     // before we start the actual distribution, calculate the division of how much to give each delegator
     const accurateDivision = Calculator.calcDivisionForBlockPeriod(firstBlock, lastBlock, split, history);
@@ -56,24 +56,24 @@ export class Distribution {
 
     // find latest distribution, handles edge case where we have multiple out of order distributions in one block
     let index = history.distributionEvents.length - 1;
-    let latestDistribution = history.distributionEvents[index];
-    const latestBlock = latestDistribution.block;
+    let latestDistributionEvent = history.distributionEvents[index];
+    const latestBlock = latestDistributionEvent.block;
     while (index >= 0 && history.distributionEvents[index].block == latestBlock) {
-      if (history.distributionEvents[index].batchLastBlock > latestDistribution.batchLastBlock) {
-        latestDistribution = history.distributionEvents[index];
+      if (history.distributionEvents[index].batchLastBlock > latestDistributionEvent.batchLastBlock) {
+        latestDistributionEvent = history.distributionEvents[index];
       }
       index--;
     }
 
     Logger.log(
-      `Found existing distribution: ${latestDistribution.batchFirstBlock}-${latestDistribution.batchLastBlock} (${latestDistribution.batchSplit.fractionForDelegators}).`
+      `Found existing distribution: ${latestDistributionEvent.batchFirstBlock}-${latestDistributionEvent.batchLastBlock} (${latestDistributionEvent.batchSplit.fractionForDelegators}).`
     );
 
     // return the result
     const res = new Distribution(
-      latestDistribution.batchFirstBlock,
-      latestDistribution.batchLastBlock,
-      latestDistribution.batchSplit,
+      latestDistributionEvent.batchFirstBlock,
+      latestDistributionEvent.batchLastBlock,
+      latestDistributionEvent.batchSplit,
       history
     );
     res.startScanningFromIndex = res._searchForEarliestEventIndex();
@@ -139,27 +139,37 @@ export class Distribution {
     return res;
   }
 
+  // return all transactions (distribution events) that were already sent as part of this distribution
+  getPreviousTransfers(): DistributionEvent[] {
+    const res: DistributionEvent[] = [];
+    for (let index = this.startScanningFromIndex; index < this.history.distributionEvents.length; index++) {
+      const event = this.history.distributionEvents[index];
+      if (event.batchFirstBlock == this.firstBlock && event.batchLastBlock == this.lastBlock) {
+        res.push(event);
+      }
+    }
+    return res;
+  }
+
   // returns all delegators (without the delegate) that were not paid yet
   private _findRemainderToDistribute(): DistributionRemainder {
     const resRemainingDelegators = _.clone(this.division.amountsWithoutDelegate);
     const resRemainingAmountForDelegate = this.division.amountForDelegate.clone();
     let resMaxTxIndex = -1;
-    for (let index = this.startScanningFromIndex; index < this.history.distributionEvents.length; index++) {
-      const event = this.history.distributionEvents[index];
-      if (event.batchFirstBlock == this.firstBlock && event.batchLastBlock == this.lastBlock) {
-        if (event.recipientAddresses[0] != this.history.delegateAddress) {
-          throw new Error(`Corrupt Distribution event ${JSON.stringify(event)} where delegate is not first.`);
-        }
-        resRemainingAmountForDelegate.isub(event.amounts[0]);
-        if (resRemainingAmountForDelegate.isNeg()) {
-          throw new Error(`Remaining amount for delegate is negative after event ${JSON.stringify(event)}.`);
-        }
-        for (let j = 1; j < event.recipientAddresses.length; j++) {
-          delete resRemainingDelegators[event.recipientAddresses[j]];
-        }
-        if (event.batchTxIndex > resMaxTxIndex) {
-          resMaxTxIndex = event.batchTxIndex;
-        }
+    const previousEvents = this.getPreviousTransfers();
+    for (const event of previousEvents) {
+      if (event.recipientAddresses[0] != this.history.delegateAddress) {
+        throw new Error(`Corrupt Distribution event ${JSON.stringify(event)} where delegate is not first.`);
+      }
+      resRemainingAmountForDelegate.isub(event.amounts[0]);
+      if (resRemainingAmountForDelegate.isNeg()) {
+        throw new Error(`Remaining amount for delegate is negative after event ${JSON.stringify(event)}.`);
+      }
+      for (let j = 1; j < event.recipientAddresses.length; j++) {
+        delete resRemainingDelegators[event.recipientAddresses[j]];
+      }
+      if (event.batchTxIndex > resMaxTxIndex) {
+        resMaxTxIndex = event.batchTxIndex;
       }
     }
 
@@ -175,23 +185,9 @@ export class Distribution {
     return Object.keys(remainder.remainingDelegators).length == 0 && remainder.remainingAmountForDelegate.isZero();
   }
 
-  async sendTransactionBatch(
-    numRecipientsPerTx?: number,
-    numConfirmations?: number,
-    confirmationTimeoutSeconds?: number,
-    progressCallback?: TxProgressNotification
-  ): Promise<{
-    isComplete: boolean;
-    txHashes: string[];
-  }> {
+  prepareTransactionBatch(numRecipientsPerTx?: number): TransactionBatch {
     if (!numRecipientsPerTx) {
       numRecipientsPerTx = DEFAULT_NUM_RECIPIENTS_PER_TX;
-    }
-    if (!numConfirmations && numConfirmations !== 0) {
-      numConfirmations = DEFAULT_NUM_CONFIRMATIONS;
-    }
-    if (!confirmationTimeoutSeconds) {
-      confirmationTimeoutSeconds = DEFAULT_CONFIRMATION_TIMEOUT_SECONDS;
     }
 
     // get the remainder that is left to distribute
@@ -202,14 +198,12 @@ export class Distribution {
     let nextTxIndex = remainder.maxTxIndex + 1; // will be zero for the first (-1+1)
 
     // make sure we have anything to send
-    if (sortedRemainingDelegators.length == 0 && amountLeftSoFarForDelegate.isZero()) {
-      return { isComplete: true, txHashes: [] };
-    }
+    if (sortedRemainingDelegators.length == 0 && amountLeftSoFarForDelegate.isZero()) return [];
 
-    Logger.log(`About to send batch based on remainder:\n${JSON.stringify(remainder, null, 2)}`);
+    Logger.log(`Preparing batch based on remainder:\n${JSON.stringify(remainder, null, 2)}`);
 
     // prepare batch
-    const batch = [];
+    const res = [];
     const totalRemainderAmountForDelegators = new BN(0);
     for (const amount of sortedRemainingDelegatorsAmounts) totalRemainderAmountForDelegators.iadd(amount);
 
@@ -231,7 +225,7 @@ export class Distribution {
                 Distribution.granularity
               );
         // add the tx to the batch
-        batch.push({
+        res.push({
           recipientAddresses: [this.history.delegateAddress, ...chunkedDelegatorsAddresses[i]],
           amounts: [amountInTxForDelegate, ...chunkedDelegatorsAmounts[i]],
           totalAmount: totalAmountInTx.add(amountInTxForDelegate),
@@ -244,13 +238,35 @@ export class Distribution {
 
     // handle edge cases like zero remaining delegators
     if (!amountLeftSoFarForDelegate.isZero()) {
-      batch.push({
+      res.push({
         recipientAddresses: [this.history.delegateAddress],
         amounts: [amountLeftSoFarForDelegate],
         totalAmount: amountLeftSoFarForDelegate,
         txIndex: nextTxIndex,
       });
     }
+
+    return res;
+  }
+
+  async sendTransactionBatch(
+    batch: TransactionBatch,
+    numConfirmations?: number,
+    confirmationTimeoutSeconds?: number,
+    progressCallback?: TxProgressNotification
+  ): Promise<{
+    isComplete: boolean;
+    txHashes: string[];
+  }> {
+    if (!numConfirmations && numConfirmations !== 0) {
+      numConfirmations = DEFAULT_NUM_CONFIRMATIONS;
+    }
+    if (!confirmationTimeoutSeconds) {
+      confirmationTimeoutSeconds = DEFAULT_CONFIRMATION_TIMEOUT_SECONDS;
+    }
+
+    // make sure we have anything to send
+    if (batch.length == 0) return { isComplete: true, txHashes: [] };
 
     Logger.log(
       `About to send batch: ${this.firstBlock}-${this.lastBlock} (${

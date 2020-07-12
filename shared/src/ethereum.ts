@@ -11,22 +11,24 @@ const GAS_LIMIT_PER_TX = 0x7fffffff; // TODO: improve
 
 export type TxProgressNotification = (progress: number, confirmations: number) => void;
 
+export type TransactionBatch = {
+  recipientAddresses: string[];
+  amounts: BN[];
+  totalAmount: BN;
+  txIndex: number;
+}[];
+
 export class EthereumAdapter {
-  private web3?: Web3;
-  private contracts: {
-    Committee?: Contract;
+  public web3?: Web3;
+  public contracts: {
     Delegations?: Contract;
     Rewards?: Contract;
   } = {};
 
   setContracts(web3: Web3, contractAddresses: EthereumContractAddresses) {
     this.web3 = web3;
-    if (contractAddresses.Committee) {
-      // TODO: replace this line with a nicer way to get the abi's
-      const abi = compiledContracts.Committee.abi;
-      this.contracts.Committee = new web3.eth.Contract(abi, contractAddresses.Committee);
-    }
     if (contractAddresses.Delegations) {
+      // TODO: replace this line with a nicer way to get the abi's
       const abi = compiledContracts.Delegations.abi;
       this.contracts.Delegations = new web3.eth.Contract(abi, contractAddresses.Delegations);
     }
@@ -38,7 +40,7 @@ export class EthereumAdapter {
 
   // TODO: add support for filters when ready (to optimize)
   async readEvents(
-    contract: 'Committee' | 'Delegations' | 'Rewards',
+    contract: 'Delegations' | 'Rewards',
     event: string,
     fromBlock: number,
     toBlock: number
@@ -56,12 +58,7 @@ export class EthereumAdapter {
 
   // returns txHashes, but only after numConfirmations is reached
   async sendRewardsTransactionBatch(
-    batch: {
-      recipientAddresses: string[];
-      amounts: BN[];
-      totalAmount: BN;
-      txIndex: number;
-    }[],
+    batch: TransactionBatch,
     fromBlock: number,
     toBlock: number,
     splitFractionForDelegators: number,

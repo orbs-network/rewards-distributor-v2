@@ -46,15 +46,11 @@
 
     - Go over the blocks one by one (in the time period relevant to the assignment) and for each block, calculate for each delgator their percentage of the total reward to *all* validators:
 
-        * **Delegator weight in total reward for this block** = **Delegate weight in committee for this block** * **Delegator weight in the delegate for this block**
-
-        * **Delegate weight in committee for this block** is taken from `CommitteeAccumulator` which accumulates `CommitteeChangeEvent` in the event history.
-
-        * **Delegator weight in the delegate for this block** is taken from `DelegationsAccumulator` which accumulates `DelegationChangeEvent` in the event history.
+        * **Delegator weight for this block** is taken from `DelegationsAccumulator` which accumulates `DelegationChangeEvent` in the event history.
 
     - Deduct the delegate's cut of the assignment according to the declated split. A split for example can be 70% for delegators, 30% for the delegate.
 
-    - Sum the **Delegator weight in total reward for this block** across all blocks in the period and this gives the relative weight for the delegator out of the assignment.
+    - Sum the **Delegator weight for this block** across all blocks in the period and this gives the relative weight for the delegator out of the assignment.
 
 - Once we have the division for each assignment, sum all of the divisions together to get the total division for all assignments together that took place in the distribution block period.
 
