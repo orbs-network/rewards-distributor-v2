@@ -6,7 +6,6 @@ import BN from 'bn.js';
 import { bnAddZeroes } from '../src/helpers';
 import { DriverOptions } from '@orbs-network/orbs-ethereum-contracts-v2/release/test/driver';
 
-const SCENARIO_MAX_STANDBYS = 3;
 const SCENARIO_MAX_COMMITTEE_SIZE = 3;
 const MONTH_IN_SECONDS = 60 * 60 * 24 * 30;
 
@@ -23,7 +22,6 @@ export class TestkitDriver {
 
   async deployOrbsV2Contracts(customWeb3Provider?: () => Web3) {
     const options: Partial<DriverOptions> = {
-      maxStandbys: SCENARIO_MAX_STANDBYS,
       maxCommitteeSize: SCENARIO_MAX_COMMITTEE_SIZE,
     };
     if (customWeb3Provider) options.web3Provider = customWeb3Provider;
@@ -61,15 +59,15 @@ export class TestkitDriver {
     const v1 = d.newParticipant();
     const v2 = d.newParticipant();
     const v3 = d.newParticipant();
-    await v1.registerAsValidator();
-    await v2.registerAsValidator();
-    await v3.registerAsValidator();
+    await v1.registerAsGuardian();
+    await v2.registerAsGuardian();
+    await v3.registerAsGuardian();
     await v1.stake(inflate15(1000000));
     await v2.stake(inflate15(2000000));
     await v3.stake(inflate15(3000000));
-    await v1.notifyReadyForCommittee();
-    await v2.notifyReadyForCommittee();
-    await v3.notifyReadyForCommittee();
+    await v1.readyForCommittee();
+    await v2.readyForCommittee();
+    await v3.readyForCommittee();
 
     // setup 6 delegators
     const d1 = d.newParticipant();
@@ -101,9 +99,9 @@ export class TestkitDriver {
 
     // setup 4th validator (that will push v1 out of committee)
     const v4 = d.newParticipant();
-    await v4.registerAsValidator();
+    await v4.registerAsGuardian();
     await v4.stake(inflate15(4000000));
-    await v4.notifyReadyForCommittee();
+    await v4.readyForCommittee();
 
     // setup 7th delegator
     const d7 = d.newParticipant();
