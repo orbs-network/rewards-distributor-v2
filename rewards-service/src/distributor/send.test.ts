@@ -255,7 +255,7 @@ describe('sendTransactionBatch', () => {
       {
         SendTime: expect.any(Number),
         GasPriceStrategy: 'discount',
-        GasPrice: 150000000000,
+        GasPrice: 100000000000,
         Status: 'successful',
         TxHash: '0xtxHash',
         EthBlock: 117,
@@ -267,7 +267,7 @@ describe('sendTransactionBatch', () => {
       {
         SendTime: expect.any(Number),
         GasPriceStrategy: 'discount',
-        GasPrice: 150000000000,
+        GasPrice: 100000000000,
         Status: 'successful',
         TxHash: '0xtxHash',
         EthBlock: 117,

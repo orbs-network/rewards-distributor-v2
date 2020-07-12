@@ -157,7 +157,3 @@ Node.js service for a validator node that distibutes rewards automatically
   ```
   npm run build
   ```
-
-&nbsp;
-
-## Project: rewards-service

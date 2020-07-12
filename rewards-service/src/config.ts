@@ -27,11 +27,11 @@ export const defaultConfiguration = {
   DefaultDistributionFrequencySeconds: 14 * 24 * 60 * 60,
   EthereumPendingTxPollTimeSeconds: 3 * 60,
   RewardFractionForDelegators: 0.7,
-  MaxRecipientsPerRewardsTx: 40,
+  MaxRecipientsPerRewardsTx: 50,
   EthereumDiscountGasPriceFactor: 0.6,
-  EthereumDiscountTxTimeoutSeconds: 60 * 60,
+  EthereumDiscountTxTimeoutSeconds: 4 * 60 * 60,
   EthereumNonDiscountTxTimeoutSeconds: 20 * 60,
-  EthereumMaxGasPrice: 150000000000, // 150 gwei
+  EthereumMaxGasPrice: 100000000000, // 100 gwei
 };
 
 export function validateConfiguration(config: Configuration) {

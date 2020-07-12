@@ -32,9 +32,9 @@ export class TestEnvironment {
       RewardFractionForDelegators: 0.7,
       MaxRecipientsPerRewardsTx: maxRecipientsPerRewardsTx,
       EthereumDiscountGasPriceFactor: 0.6,
-      EthereumDiscountTxTimeoutSeconds: 60 * 60,
+      EthereumDiscountTxTimeoutSeconds: 4 * 60 * 60,
       EthereumNonDiscountTxTimeoutSeconds: 20 * 60,
-      EthereumMaxGasPrice: 150000000000, // 150 gwei
+      EthereumMaxGasPrice: 100000000000, // 100 gwei
     };
   }
 
