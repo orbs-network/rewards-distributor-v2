@@ -42,7 +42,7 @@ describe('e2e with docker compose - resume distribution', () => {
       MemoryBytesUsed: isPositiveNumber,
       HistoryMaxProcessedBlock: latestEthereumBlock + 1,
       LastHistoryBatchTime: isValidTimeRef,
-      HistoryTotalAssignmentEvents: 15,
+      HistoryTotalAssignmentEvents: 16,
       HistoryTotalDistributionEvents: 1,
       DistributionFrequencySeconds: 5,
       TimeToNextDistribution: isNumber,
@@ -72,7 +72,7 @@ describe('e2e with docker compose - resume distribution', () => {
       MemoryBytesUsed: isPositiveNumber,
       HistoryMaxProcessedBlock: isPositiveNumber,
       LastHistoryBatchTime: isValidTimeRef,
-      HistoryTotalAssignmentEvents: 15, // TODO: 18 after commit
+      HistoryTotalAssignmentEvents: 17,
       HistoryTotalDistributionEvents: 2,
       DistributionFrequencySeconds: 5,
       TimeToNextDistribution: isPositiveNumber,
