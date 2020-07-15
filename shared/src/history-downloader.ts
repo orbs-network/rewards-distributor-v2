@@ -6,6 +6,7 @@ import Web3 from 'web3';
 import { EthereumContractAddresses } from '.';
 import { EthereumAdapter } from './ethereum';
 import { EventHistory } from './model';
+import { normalizeAddress } from './helpers';
 
 const DEFAULT_CONCURRENCY = 5;
 
@@ -16,7 +17,7 @@ export class HistoryDownloader {
   public ethereum = new EthereumAdapter();
 
   constructor(delegateAddress: string, startingBlock: number, private storeExtraHistoryPerDelegate = false) {
-    this.history = new EventHistory(delegateAddress, startingBlock);
+    this.history = new EventHistory(normalizeAddress(delegateAddress), startingBlock);
   }
 
   setEthereumContracts(web3: Web3, ethereumContractAddresses: EthereumContractAddresses) {
@@ -78,12 +79,13 @@ export class HistoryDownloader {
     const allDelegates: { [delegateAddress: string]: boolean } = {};
     for (const event of events) {
       // for debug: console.log(event.blockNumber, event.returnValues);
-      allDelegates[event.returnValues.addr] = true;
-      if (event.returnValues.addr.toLowerCase() != history.delegateAddress.toLowerCase()) continue;
+      const addr = normalizeAddress(event.returnValues.addr);
+      allDelegates[addr] = true;
+      if (addr != history.delegateAddress) continue;
       for (let i = 0; i < event.returnValues.delegators.length; i++) {
         history.delegationChangeEvents.push({
           block: event.blockNumber,
-          delegatorAddress: event.returnValues.delegators[i],
+          delegatorAddress: normalizeAddress(event.returnValues.delegators[i]),
           newDelegatedStake: new BN(event.returnValues.delegatorTotalStakes[i]),
         });
       }
@@ -97,8 +99,9 @@ export class HistoryDownloader {
     for (const event of events) {
       // for debug: console.log(event.blockNumber, event.returnValues);
       for (let i = 0; i < event.returnValues.assignees.length; i++) {
-        allDelegates[event.returnValues.assignees[i]] = true;
-        if (event.returnValues.assignees[i].toLowerCase() != history.delegateAddress.toLowerCase()) continue;
+        const assignee = normalizeAddress(event.returnValues.assignees[i]);
+        allDelegates[assignee] = true;
+        if (assignee != history.delegateAddress) continue;
         history.assignmentEvents.push({
           block: event.blockNumber,
           amount: new BN(event.returnValues.amounts[i]),
@@ -113,12 +116,14 @@ export class HistoryDownloader {
     const allDelegates: { [delegateAddress: string]: boolean } = {};
     for (const event of events) {
       // for debug: console.log(event.blockNumber, event.returnValues);
-      allDelegates[event.returnValues.distributer] = true;
-      if (event.returnValues.distributer.toLowerCase() != history.delegateAddress.toLowerCase()) continue;
+      const distributer = normalizeAddress(event.returnValues.distributer);
+      allDelegates[distributer] = true;
+      if (distributer != history.delegateAddress) continue;
       const recipientAddresses = [];
       const amounts = [];
       for (let i = 0; i < event.returnValues.to.length; i++) {
-        recipientAddresses.push(event.returnValues.to[i]);
+        const to = normalizeAddress(event.returnValues.to[i]);
+        recipientAddresses.push(to);
         amounts.push(new BN(event.returnValues.amounts[i]));
       }
       history.distributionEvents.push({

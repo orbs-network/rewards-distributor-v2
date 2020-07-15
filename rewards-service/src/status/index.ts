@@ -6,6 +6,7 @@ import { ensureFileDirectoryExists, JsonResponse, getCurrentClockTime, sleep } f
 import { Configuration } from '../config';
 
 const HISTORY_BATCH_TIME_ALLOWED_DELAY = 60 * 60; // seconds
+const DISTRIBUTION_MAX_DURATION = 2 * 24 * 60 * 60; // seconds
 
 const timeOriginallyLaunched = getCurrentClockTime();
 
@@ -26,13 +27,14 @@ export class StatusWriter {
         HistoryTotalDistributionEvents: this.state.EventHistory?.distributionEvents.length ?? 0,
         TimeToNextDistribution: this.state.TimeToNextDistribution,
         LastDistributions: this.state.LastDistributions,
+        InProgressDistribution: this.state.InProgressDistribution,
         LastTransactions: this.state.LastTransactions,
         Config: this.config,
       },
     };
 
     // include error field if found errors
-    const errorText = getErrorText(this.state);
+    const errorText = getErrorText(this.state, this.config);
     if (errorText) {
       status.Error = errorText;
     }
@@ -63,7 +65,7 @@ function getStatusText(state: State) {
   return res.join(', ');
 }
 
-function getErrorText(state: State) {
+function getErrorText(state: State, config: Configuration) {
   const res = [];
   const now = getCurrentClockTime();
   const historyBatchAgo = now - state.LastHistoryBatchTime;
@@ -77,6 +79,15 @@ function getErrorText(state: State) {
   );
   if (numUnsuccessfulTx >= Math.round(NUM_LAST_TRANSACTIONS / 2)) {
     res.push(`Too many unsuccessful transactions (${numUnsuccessfulTx}).`);
+  }
+  const latestDistributionStartTime = _.reduce(
+    state.LastDistributions,
+    (max, dist) => Math.max(max, dist.StartTime),
+    0
+  );
+  const deltaFromLatestStart = now - latestDistributionStartTime;
+  if (deltaFromLatestStart > config.DistributionFrequencySeconds + DISTRIBUTION_MAX_DURATION) {
+    res.push(`Too much time passed from last distribution (${deltaFromLatestStart} sec).`);
   }
   return res.join(' ');
 }

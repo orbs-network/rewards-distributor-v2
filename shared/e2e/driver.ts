@@ -3,7 +3,7 @@ import { Web3Driver } from '@orbs-network/orbs-ethereum-contracts-v2/release/eth
 import { EthereumContractAddresses } from '../src';
 import Web3 from 'web3';
 import BN from 'bn.js';
-import { bnAddZeroes } from '../src/helpers';
+import { bnAddZeroes, normalizeAddress } from '../src/helpers';
 import { DriverOptions } from '@orbs-network/orbs-ethereum-contracts-v2/release/test/driver';
 
 const SCENARIO_MAX_COMMITTEE_SIZE = 3;
@@ -90,8 +90,8 @@ export class TestkitDriver {
     await d6.delegate(v3);
 
     // the delegate running the reward distribution code is v2
-    this.delegateAddress = v2.address;
-    this.delegateOrbsAddress = v2.orbsAddress;
+    this.delegateAddress = normalizeAddress(v2.address);
+    this.delegateOrbsAddress = normalizeAddress(v2.orbsAddress);
 
     // assign rewards (TODO: this will become automatic)
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS * 4);

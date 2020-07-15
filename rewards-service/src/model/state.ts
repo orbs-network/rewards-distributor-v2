@@ -8,6 +8,7 @@ export class State {
   EventHistory?: EventHistory;
   TimeToNextDistribution = 0; // seconds
   LastDistributions: { [distributionName: string]: DistributionStats } = {};
+  InProgressDistribution?: DistributionStats;
   LastTransactions: EthereumTxStatus[] = [];
 }
 
@@ -18,6 +19,7 @@ export type GasPriceStrategy = 'discount' | 'recommended';
 export type TransactionStatus = 'pending' | 'successful' | 'failed-send' | 'timeout' | 'removed-from-pool' | 'revert';
 
 export interface DistributionStats {
+  DistributionName: string;
   StartTime: number; // UTC seconds
   Complete: boolean;
   NumNonGuardianRecipients: number;
@@ -26,13 +28,13 @@ export interface DistributionStats {
 }
 
 export interface EthereumTxStatus {
+  DistributionName: string;
   SendTime: number; // UTC seconds
   GasPriceStrategy: GasPriceStrategy;
   GasPrice: number; // wei
   Status: TransactionStatus;
   TxHash: string;
   EthBlock: number;
-  DistributionName: string;
   TxIndex: number;
   NumRecipients: number;
   TotalAmount: string;

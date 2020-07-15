@@ -1,5 +1,11 @@
 import BN from 'bn.js';
-import { bnDivideAsNumber, bnMultiplyByNumber, bnAddZeroes, findLowestClosestIndexToBlock } from './helpers';
+import {
+  bnDivideAsNumber,
+  bnMultiplyByNumber,
+  bnAddZeroes,
+  findLowestClosestIndexToBlock,
+  normalizeAddress,
+} from './helpers';
 import { EventHistory } from './model';
 
 describe('bnDivideAsNumber', () => {
@@ -70,5 +76,15 @@ describe('findClosestIndexToBlock', () => {
     expect(findLowestClosestIndexToBlock(5, [{ block: 1 }, { block: 8 }, { block: 9 }])).toEqual(1);
     // 4 elements
     expect(findLowestClosestIndexToBlock(5, [{ block: 1 }, { block: 2 }, { block: 8 }, { block: 9 }])).toEqual(2);
+  });
+});
+
+describe('normalizeAddress', () => {
+  it('works', () => {
+    expect(normalizeAddress('0x123abc')).toEqual('0x123abc');
+    expect(normalizeAddress('0x123AbC')).toEqual('0x123abc');
+    expect(normalizeAddress('123abc')).toEqual('0x123abc');
+    expect(normalizeAddress('123AbC')).toEqual('0x123abc');
+    expect(normalizeAddress('0X123ABC')).toEqual('0x123abc');
   });
 });

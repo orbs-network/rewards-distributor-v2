@@ -3,6 +3,7 @@ import { join } from 'path';
 import { sleep } from '../src/helpers';
 import { deepDataMatcher, isPositiveNumber, isValidTimeRef, isNumber, isValidTxHash } from './deep-matcher';
 import { inflate15 } from 'rewards-v2/dist/e2e/driver';
+import { normalizeAddress } from 'rewards-v2';
 
 jest.setTimeout(5 * 60000);
 
@@ -103,7 +104,7 @@ describe('e2e with docker compose - resume distribution', () => {
     // expectations over new distribution events
     const events = await driver.sharedTestkit.getNewDistributionEvents(latestEthereumBlock + 2);
     expect(events.length).toEqual(1);
-    expect(events[0].returnValues).toHaveProperty('distributer', driver.sharedTestkit.delegateAddress);
+    expect(normalizeAddress(events[0].returnValues.distributer)).toEqual(driver.sharedTestkit.delegateAddress);
     expect(events[0].returnValues).toHaveProperty('fromBlock', '0');
     expect(events[0].returnValues).toHaveProperty('toBlock', latestEthereumBlock.toString());
     expect(events[0].returnValues).toHaveProperty('split', '70000');

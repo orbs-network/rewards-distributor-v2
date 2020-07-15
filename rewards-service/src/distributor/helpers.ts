@@ -22,6 +22,7 @@ export function distributionStats(
   complete: boolean
 ): DistributionStats {
   const res = {
+    DistributionName: distributionName(distribution),
     StartTime: startTime,
     Complete: complete,
     NumNonGuardianRecipients: 0,

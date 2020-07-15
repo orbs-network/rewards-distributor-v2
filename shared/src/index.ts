@@ -11,3 +11,4 @@ export interface EthereumContractAddresses {
 
 export { EventHistory } from './model';
 export { TransactionBatch } from './ethereum';
+export { normalizeAddress } from './helpers';

@@ -16,6 +16,7 @@ describe('distributionName', () => {
 describe('distributionStats', () => {
   it('returns stats correctly', () => {
     expect(distributionStats(null, 1400000000, true)).toEqual({
+      DistributionName: 'genesis',
       StartTime: 1400000000,
       Complete: true,
       NumNonGuardianRecipients: 0,
@@ -35,6 +36,7 @@ describe('distributionStats', () => {
       },
     } as unknown) as Distribution;
     expect(distributionStats(distributionMock, 1500000022, false)).toEqual({
+      DistributionName: '0-12345',
       StartTime: 1500000022,
       Complete: false,
       NumNonGuardianRecipients: 3,

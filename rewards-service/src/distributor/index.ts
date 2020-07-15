@@ -71,17 +71,17 @@ export class Distributor {
     const lastDistribution = Distribution.getLastDistribution(latestEthereumBlock, this.historyDownloader.history);
     const lastDistributionStartTime = await this.getDistributionStartTime(lastDistribution);
     const lastDistributionComplete = lastDistribution?.isDistributionComplete() ?? true;
-    this.state.LastDistributions[distributionName(lastDistribution)] = distributionStats(
+    const lastDistributionName = distributionName(lastDistribution);
+    this.state.LastDistributions[lastDistributionName] = distributionStats(
       lastDistribution,
       lastDistributionStartTime,
       lastDistributionComplete
     );
+    if (lastDistributionComplete) this.state.InProgressDistribution = undefined;
 
     // see if we have an active distribution that was not completed
     if (lastDistribution != null && !lastDistributionComplete) {
-      Logger.log(
-        `Distributor: found distribution ${distributionName(lastDistribution)} that is active and incomplete.`
-      );
+      Logger.log(`Distributor: found distribution ${lastDistributionName} that is active and incomplete.`);
       await this.completeDistribution(lastDistribution);
       return;
     }
@@ -96,10 +96,9 @@ export class Distributor {
         this.split,
         this.historyDownloader.history
       );
+      const newDistributionName = distributionName(newDistribution);
       Logger.log(
-        `Distributor: starting new distribution ${distributionName(newDistribution)} since ${distributionName(
-          lastDistribution
-        )} started on ${lastDistributionStartTime}.`
+        `Distributor: starting new distribution ${newDistributionName} since ${lastDistributionName} started on ${lastDistributionStartTime}.`
       );
       await this.completeDistribution(newDistribution);
       return;
@@ -109,7 +108,8 @@ export class Distributor {
   // returns UTC seconds
   async getDistributionStartTime(distribution: Distribution | null): Promise<number> {
     // this operation is a little expensive so cache it
-    const cachedResponse = this.state.LastDistributions[distributionName(distribution)];
+    const distName = distributionName(distribution);
+    const cachedResponse = this.state.LastDistributions[distName];
     if (cachedResponse) return cachedResponse.StartTime;
 
     // start by finding out the block number of the first transfer in the distribution
@@ -117,7 +117,7 @@ export class Distributor {
     if (distribution != null) {
       const transfers = distribution.getPreviousTransfers();
       if (transfers.length == 0) {
-        throw new Error(`Trying to get time of empty distribution ${distributionName(distribution)}.`);
+        throw new Error(`Trying to get time of empty distribution ${distName}.`);
       }
       firstTxBlock = transfers[0].block;
     }
@@ -125,13 +125,14 @@ export class Distributor {
     // convert block number to time
     const block = await this.web3.eth.getBlock(firstTxBlock);
     if (!block) {
-      throw new Error(`Cannot get time of block ${firstTxBlock} belonging to ${distributionName(distribution)}.`);
+      throw new Error(`Cannot get time of block ${firstTxBlock} belonging to ${distName}.`);
     }
     const res = toNumber(block.timestamp);
     return res;
   }
 
   async completeDistribution(distribution: Distribution) {
+    this.state.InProgressDistribution = distributionStats(distribution, getCurrentClockTime(), false);
     distribution.setEthereumContracts(this.web3, this.contractAddresses);
     const batch = distribution.prepareTransactionBatch(this.config.MaxRecipientsPerRewardsTx);
     await sendTransactionBatch(batch, distribution, this.signer, this.state, this.config);

@@ -55,6 +55,13 @@ export function findLowestClosestIndexToBlock(block: number, events: { block: nu
   return left;
 }
 
+export function normalizeAddress(address: string): string {
+  if (!address) return address;
+  address = address.toLowerCase();
+  if (!address.startsWith('0x')) return `0x${address}`;
+  return address;
+}
+
 BN.prototype.toJSON = function () {
   return this.toString(10);
 };

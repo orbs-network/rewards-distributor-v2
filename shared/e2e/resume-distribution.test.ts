@@ -1,6 +1,6 @@
 import { TestkitDriver, log, inflate15 } from './driver';
 import { HistoryDownloader, Distribution } from '../src';
-import { bnAddZeroes } from '../src/helpers';
+import { bnAddZeroes, normalizeAddress } from '../src/helpers';
 
 jest.setTimeout(60000);
 
@@ -37,7 +37,8 @@ describe('resume distribution', () => {
     log(`latest ethereum block: ${latestEthereumBlock}`);
 
     // create a history downloader
-    const historyDownloader = new HistoryDownloader(driver.delegateAddress!, 0);
+    const delegateAddressWeirdCase = driver.delegateAddress!.toUpperCase();
+    const historyDownloader = new HistoryDownloader(delegateAddressWeirdCase, 0);
     historyDownloader.setEthereumContracts(driver.web3, driver.ethereumContractAddresses!);
 
     // download history up to this block
@@ -82,7 +83,7 @@ describe('resume distribution', () => {
     // expectations over new distribution events
     const events = await driver.getNewDistributionEvents(latestEthereumBlock + 1);
     expect(events.length).toEqual(1);
-    expect(events[0].returnValues).toHaveProperty('distributer', driver.delegateAddress);
+    expect(normalizeAddress(events[0].returnValues.distributer)).toEqual(driver.delegateAddress);
     expect(events[0].returnValues).toHaveProperty('fromBlock', '0');
     expect(events[0].returnValues).toHaveProperty('toBlock', (latestEthereumBlock - 1).toString());
     expect(events[0].returnValues).toHaveProperty('split', '70000');

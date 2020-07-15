@@ -35,13 +35,13 @@ export async function sendTransactionBatch(
     const gasPrice = await calcGasPrice(web3, gasPriceStrategy, config);
 
     const txStatus: EthereumTxStatus = {
+      DistributionName: distributionName(distribution),
       SendTime: getCurrentClockTime(),
       GasPriceStrategy: gasPriceStrategy,
       GasPrice: gasPrice,
       Status: 'pending',
       TxHash: '',
       EthBlock: 0,
-      DistributionName: distributionName(distribution),
       TxIndex: txData.txIndex,
       NumRecipients: txData.recipientAddresses.length,
       TotalAmount: txData.totalAmount.toString(),
