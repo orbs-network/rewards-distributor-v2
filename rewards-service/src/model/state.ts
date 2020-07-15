@@ -6,7 +6,6 @@ export class State {
   HistoryMaxProcessedBlock = 0;
   LastHistoryBatchTime = 0; // UTC seconds
   EventHistory?: EventHistory;
-  DistributionFrequencySeconds = 14 * 24 * 60 * 60;
   TimeToNextDistribution = 0; // seconds
   LastDistributions: { [distributionName: string]: DistributionStats } = {};
   LastTransactions: EthereumTxStatus[] = [];

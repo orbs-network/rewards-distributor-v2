@@ -43,7 +43,6 @@ describe('status task', () => {
       LastHistoryBatchTime: 0,
       HistoryTotalAssignmentEvents: 0,
       HistoryTotalDistributionEvents: 0,
-      DistributionFrequencySeconds: 14 * 24 * 60 * 60,
       TimeToNextDistribution: 0,
       LastDistributions: {},
       LastTransactions: [],

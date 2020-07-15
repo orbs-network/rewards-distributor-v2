@@ -44,7 +44,6 @@ describe('e2e with docker compose - resume distribution', () => {
       LastHistoryBatchTime: isValidTimeRef,
       HistoryTotalAssignmentEvents: 16,
       HistoryTotalDistributionEvents: 1,
-      DistributionFrequencySeconds: 5,
       TimeToNextDistribution: isNumber,
       LastDistributions: {
         [distributionName]: {
@@ -74,7 +73,6 @@ describe('e2e with docker compose - resume distribution', () => {
       LastHistoryBatchTime: isValidTimeRef,
       HistoryTotalAssignmentEvents: 17,
       HistoryTotalDistributionEvents: 2,
-      DistributionFrequencySeconds: 5,
       TimeToNextDistribution: isPositiveNumber,
       LastDistributions: {
         [distributionName]: {

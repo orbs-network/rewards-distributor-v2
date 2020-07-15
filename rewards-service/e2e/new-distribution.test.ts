@@ -32,7 +32,6 @@ describe('e2e with docker compose - new distribution', () => {
       LastHistoryBatchTime: isValidTimeRef,
       HistoryTotalAssignmentEvents: 15,
       HistoryTotalDistributionEvents: 0,
-      DistributionFrequencySeconds: 5,
       TimeToNextDistribution: isNumber,
       LastDistributions: {
         genesis: {
@@ -63,7 +62,6 @@ describe('e2e with docker compose - new distribution', () => {
       LastHistoryBatchTime: isValidTimeRef,
       HistoryTotalAssignmentEvents: 17,
       HistoryTotalDistributionEvents: 2,
-      DistributionFrequencySeconds: 5,
       TimeToNextDistribution: isPositiveNumber,
       LastDistributions: {
         genesis: {

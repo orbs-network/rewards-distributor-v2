@@ -9,7 +9,7 @@ export interface Configuration {
   StatusPollTimeSeconds: number;
   DistributorWakeIntervalSeconds: number;
   EthereumFirstBlock: number;
-  DefaultDistributionFrequencySeconds: number;
+  DistributionFrequencySeconds: number;
   EthereumPendingTxPollTimeSeconds: number;
   RewardFractionForDelegators: number;
   MaxRecipientsPerRewardsTx: number;
@@ -24,7 +24,7 @@ export const defaultConfiguration = {
   StatusPollTimeSeconds: 20,
   DistributorWakeIntervalSeconds: 5 * 60,
   EthereumFirstBlock: 0,
-  DefaultDistributionFrequencySeconds: 14 * 24 * 60 * 60,
+  DistributionFrequencySeconds: 14 * 24 * 60 * 60,
   EthereumPendingTxPollTimeSeconds: 3 * 60,
   RewardFractionForDelegators: 0.7,
   MaxRecipientsPerRewardsTx: 50,
@@ -86,11 +86,11 @@ export function validateConfiguration(config: Configuration) {
   if (typeof config.EthereumFirstBlock != 'number') {
     throw new Error(`EthereumFirstBlock is not a number.`);
   }
-  if (!config.DefaultDistributionFrequencySeconds) {
-    throw new Error(`DefaultDistributionFrequencySeconds is empty or zero.`);
+  if (!config.DistributionFrequencySeconds) {
+    throw new Error(`DistributionFrequencySeconds is empty or zero.`);
   }
-  if (typeof config.DefaultDistributionFrequencySeconds != 'number') {
-    throw new Error(`DefaultDistributionFrequencySeconds is not a number.`);
+  if (typeof config.DistributionFrequencySeconds != 'number') {
+    throw new Error(`DistributionFrequencySeconds is not a number.`);
   }
   if (!config.EthereumPendingTxPollTimeSeconds) {
     throw new Error(`EthereumPendingTxPollTimeSeconds is empty or zero.`);

@@ -24,7 +24,6 @@ export class StatusWriter {
         LastHistoryBatchTime: this.state.LastHistoryBatchTime,
         HistoryTotalAssignmentEvents: this.state.EventHistory?.assignmentEvents.length ?? 0,
         HistoryTotalDistributionEvents: this.state.EventHistory?.distributionEvents.length ?? 0,
-        DistributionFrequencySeconds: this.state.DistributionFrequencySeconds,
         TimeToNextDistribution: this.state.TimeToNextDistribution,
         LastDistributions: this.state.LastDistributions,
         LastTransactions: this.state.LastTransactions,

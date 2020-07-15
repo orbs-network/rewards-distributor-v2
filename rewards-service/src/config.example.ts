@@ -11,7 +11,7 @@ export const exampleConfig: Configuration = {
   StatusPollTimeSeconds: 20,
   DistributorWakeIntervalSeconds: 5 * 60,
   EthereumFirstBlock: 0,
-  DefaultDistributionFrequencySeconds: 14 * 24 * 60 * 60,
+  DistributionFrequencySeconds: 14 * 24 * 60 * 60,
   EthereumPendingTxPollTimeSeconds: 3 * 60,
   RewardFractionForDelegators: 0.7,
   MaxRecipientsPerRewardsTx: 50,

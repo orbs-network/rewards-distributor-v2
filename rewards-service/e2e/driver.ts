@@ -27,7 +27,7 @@ export class TestEnvironment {
       StatusPollTimeSeconds: 1,
       DistributorWakeIntervalSeconds: 1,
       EthereumFirstBlock: 0,
-      DefaultDistributionFrequencySeconds: 5,
+      DistributionFrequencySeconds: 5,
       EthereumPendingTxPollTimeSeconds: 2,
       RewardFractionForDelegators: 0.7,
       MaxRecipientsPerRewardsTx: maxRecipientsPerRewardsTx,

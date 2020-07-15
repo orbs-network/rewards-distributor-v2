@@ -14,7 +14,7 @@ export type DistributorConfiguration = EthereumTxParams & {
   EthereumRewardsContract: string;
   GuardianAddress: string;
   EthereumFirstBlock: number;
-  DefaultDistributionFrequencySeconds: number;
+  DistributionFrequencySeconds: number;
   RewardFractionForDelegators: number;
   MaxRecipientsPerRewardsTx: number;
 };
@@ -38,7 +38,6 @@ export class Distributor {
     this.historyDownloader.setEthereumContracts(this.web3, this.contractAddresses);
     state.EventHistory = this.historyDownloader.history;
     state.HistoryMaxProcessedBlock = config.EthereumFirstBlock;
-    state.DistributionFrequencySeconds = config.DefaultDistributionFrequencySeconds;
     Logger.log(`Distributor: initialized with first block ${state.HistoryMaxProcessedBlock}.`);
   }
 
@@ -89,7 +88,7 @@ export class Distributor {
 
     // no active incomplete distributions, is it time to start a new one?
     const now = getCurrentClockTime();
-    this.state.TimeToNextDistribution = this.state.DistributionFrequencySeconds - (now - lastDistributionStartTime);
+    this.state.TimeToNextDistribution = this.config.DistributionFrequencySeconds - (now - lastDistributionStartTime);
     if (this.state.TimeToNextDistribution < 0) this.state.TimeToNextDistribution = 0;
     if (this.state.TimeToNextDistribution == 0) {
       const newDistribution = Distribution.startNewDistribution(
