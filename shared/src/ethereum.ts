@@ -33,7 +33,7 @@ export class EthereumAdapter {
       this.contracts.Delegations = new web3.eth.Contract(abi, contractAddresses.Delegations);
     }
     if (contractAddresses.Rewards) {
-      const abi = compiledContracts.GuardiansWallet.abi; // TODO workaround -
+      const abi = compiledContracts.Rewards.abi;
       this.contracts.Rewards = new web3.eth.Contract(abi, contractAddresses.Rewards);
     }
   }

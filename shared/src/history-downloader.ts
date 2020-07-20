@@ -41,7 +41,7 @@ export class HistoryDownloader {
 
     const requests = [];
     requests[0] = limit(() => this.ethereum.readEvents('Delegations', 'DelegatedStakeChanged', fromBlock, toBlock));
-    requests[1] = limit(() => this.ethereum.readEvents('Rewards', 'RewardsAssigned', fromBlock, toBlock)); // TODO a hack to pass the address of GuardiansWallet to rewards-service
+    requests[1] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsAssigned', fromBlock, toBlock));
     requests[2] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsDistributed', fromBlock, toBlock));
 
     const results = await Promise.all(requests);
@@ -104,7 +104,7 @@ export class HistoryDownloader {
         if (assignee != history.delegateAddress) continue;
         history.assignmentEvents.push({
           block: event.blockNumber,
-          amount: new BN(event.returnValues.stakingRewards[i]), // TODO a hack to pass the address of GuardiansWallet to rewards-service
+          amount: new BN(event.returnValues.amounts[i]),
         });
       }
     }
