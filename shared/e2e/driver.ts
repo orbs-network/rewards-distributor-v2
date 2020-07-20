@@ -52,8 +52,7 @@ export class TestkitDriver {
     await d.erc20.assign(d.accounts[0], poolAmount);
     await d.erc20.approve(d.rewards.address, poolAmount);
     await d.rewards.setAnnualStakingRewardsRate(annualRate, poolAmount, { from: d.functionalOwner.address });
-    await d.rewards.topUpStakingRewardsPool(poolAmount);
-    await d.rewards.setMaxDelegatorsStakingRewardsPercentMille(70000, { from: d.functionalOwner.address });
+    await d.guardiansWallet.setMaxDelegatorsStakingRewardsPercentMille(70000, { from: d.functionalOwner.address });
 
     // setup 3 validators (max committee size is 3)
     const v1 = d.newParticipant();
@@ -137,7 +136,7 @@ export class TestkitDriver {
   ) {
     const total = new BN(0);
     for (const amount of amounts) total.iadd(amount);
-    await this.orbsV2Driver?.rewards.distributeOrbsTokenStakingRewards(
+    await this.orbsV2Driver?.guardiansWallet.distributeStakingRewards(
       total,
       fromBlock,
       toBlock,
@@ -150,7 +149,7 @@ export class TestkitDriver {
   }
 
   async getCurrentRewardBalance(delegateAddress: string): Promise<BN> {
-    const res = await this.orbsV2Driver?.rewards.getStakingRewardBalance(delegateAddress);
+    const res = await this.orbsV2Driver?.guardiansWallet.getStakingRewardBalance(delegateAddress);
     return new BN(res!);
   }
 
