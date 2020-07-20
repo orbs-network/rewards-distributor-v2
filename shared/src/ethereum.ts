@@ -7,7 +7,7 @@ import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/rele
 import { sleep } from './helpers';
 
 const CONFIRMATION_POLL_INTERVAL_SECONDS = 5;
-const GAS_LIMIT_PER_TX = 0x7fffffff; // TODO: improve
+const GAS_LIMIT_PER_TX = 10000000; // TODO: improve
 
 export type TxProgressNotification = (progress: number, confirmations: number) => void;
 
