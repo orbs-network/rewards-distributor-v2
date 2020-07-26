@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  node: circleci/node@1.1.6
+  node: circleci/node@3.0.1
   docker: circleci/docker@0.5.19
 jobs:
   test-shared:
@@ -8,15 +8,14 @@ jobs:
     steps:
       - checkout
       - node/install:
-          node-version: '12.13.0'
+          node-version: '12.18.0'
       - docker/install-docker
       - run: node --version
       - run: npm --version
       - run: docker --version
       - run: env
-      - run:
-          working_directory: ./shared
-          command: npm install
+      - node/install-packages:
+          app-dir: ./shared
       - run:
           working_directory: ./shared
           command: npm install --save-dev jest-junit
@@ -52,18 +51,22 @@ jobs:
     steps:
       - checkout
       - node/install:
-          node-version: '12.13.0'
+          node-version: '12.18.0'
       - docker/install-docker
       - run: node --version
       - run: npm --version
       - run: docker --version
       - run: env
+      - node/install-packages:
+          app-dir: ./shared
       - run:
           working_directory: ./shared
-          command: npm install && npm run build
+          command: npm run build
+      - node/install-packages:
+          app-dir: ./rewards-service
       - run:
           working_directory: ./rewards-service
-          command: npm install && npm run build
+          command: npm run build
       - run:
           working_directory: ./rewards-service
           command: npm install --save-dev jest-junit
@@ -94,15 +97,19 @@ jobs:
     steps:
         - checkout
         - node/install:
-            node-version: '12.13.0'
+            node-version: '12.18.0'
         - docker/install-docker
         - run: ./rewards-service/boyar/create-version-file.sh
+        - node/install-packages:
+            app-dir: ./shared
         - run:
             working_directory: ./shared
-            command: npm install && npm run build
+            command: npm run build
+        - node/install-packages:
+            app-dir: ./rewards-service
         - run:
             working_directory: ./rewards-service
-            command: npm install && npm run build
+            command: npm run build
         - run:
             working_directory: ./rewards-service
             command: ./boyar/create-version-file.sh
@@ -116,15 +123,19 @@ jobs:
     steps:
         - checkout
         - node/install:
-            node-version: '12.13.0'
+            node-version: '12.18.0'
         - docker/install-docker
         - run: ./rewards-service/boyar/create-version-file.sh
+        - node/install-packages:
+            app-dir: ./shared
         - run:
             working_directory: ./shared
-            command: npm install && npm run build
+            command: npm run build
+        - node/install-packages:
+            app-dir: ./rewards-service
         - run:
             working_directory: ./rewards-service
-            command: npm install && npm run build
+            command: npm run build
         - run:
             working_directory: ./rewards-service
             command: ./boyar/create-version-file.sh
