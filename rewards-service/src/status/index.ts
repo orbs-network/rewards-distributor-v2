@@ -29,6 +29,7 @@ export class StatusWriter {
         LastDistributions: this.state.LastDistributions,
         InProgressDistribution: this.state.InProgressDistribution,
         LastTransactions: this.state.LastTransactions,
+        EventRequestStats: this.state.EventRequestStats,
         Config: this.config,
       },
     };

@@ -40,9 +40,12 @@ export class HistoryDownloader {
     }
 
     const requests = [];
-    requests[0] = limit(() => this.ethereum.readEvents('Delegations', 'DelegatedStakeChanged', fromBlock, toBlock));
-    requests[1] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsAssigned', fromBlock, toBlock));
-    requests[2] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsDistributed', fromBlock, toBlock));
+    const f0 = !this.storeExtraHistoryPerDelegate ? { addr: this.history.delegateAddress } : undefined;
+    const f1 = undefined; // no filter for this event
+    const f2 = !this.storeExtraHistoryPerDelegate ? { distributer: this.history.delegateAddress } : undefined;
+    requests[0] = limit(() => this.ethereum.readEvents('Delegations', 'DelegatedStakeChanged', fromBlock, toBlock, f0));
+    requests[1] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsAssigned', fromBlock, toBlock, f1));
+    requests[2] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsDistributed', fromBlock, toBlock, f2));
 
     const results = await Promise.all(requests);
     const d0 = HistoryDownloader._parseDelegationChangedEvents(results[0], this.history);

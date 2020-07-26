@@ -2,9 +2,9 @@ import _ from 'lodash';
 import Web3 from 'web3';
 import BN from 'bn.js';
 import { EthereumContractAddresses } from '.';
-import { EventData, Contract } from 'web3-eth-contract';
+import { EventData, Contract, PastEventOptions } from 'web3-eth-contract';
 import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/release/compiled-contracts';
-import { sleep } from './helpers';
+import { sleep, DailyStats } from './helpers';
 
 const CONFIRMATION_POLL_INTERVAL_SECONDS = 5;
 const GAS_LIMIT_PER_TX = 10000000; // TODO: improve
@@ -24,6 +24,7 @@ export class EthereumAdapter {
     Delegations?: Contract;
     Rewards?: Contract;
   } = {};
+  public readEventsStats = new DailyStats();
 
   setContracts(web3: Web3, contractAddresses: EthereumContractAddresses) {
     this.web3 = web3;
@@ -38,21 +39,24 @@ export class EthereumAdapter {
     }
   }
 
-  // TODO: add support for filters when ready (to optimize)
   async readEvents(
     contract: 'Delegations' | 'Rewards',
     event: string,
     fromBlock: number,
-    toBlock: number
+    toBlock: number,
+    filter?: { [key: string]: number | string }
   ): Promise<EventData[]> {
     const ethereumContract = this.contracts[contract];
     if (!ethereumContract) {
       throw new Error(`Ethereum contract '${contract}' is undefined, did you call setEthereumContracts?`);
     }
-    const res = await ethereumContract.getPastEvents(event, {
+    const options: PastEventOptions = {
       fromBlock: fromBlock,
       toBlock: toBlock,
-    });
+    };
+    if (filter) options.filter = filter;
+    this.readEventsStats.add(1);
+    const res = await ethereumContract.getPastEvents(event, options);
     return res;
   }
 

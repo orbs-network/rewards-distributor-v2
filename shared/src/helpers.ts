@@ -65,3 +65,27 @@ export function normalizeAddress(address: string): string {
 BN.prototype.toJSON = function () {
   return this.toString(10);
 };
+
+export type DailyStatsData = { day: string; count: number }[];
+
+export class DailyStats {
+  private data: DailyStatsData = [];
+  constructor(private daysToRemember = 7) {}
+  add(num: number) {
+    const day = this.today();
+    if (this.data.length > 0 && this.data[this.data.length - 1].day == day) {
+      this.data[this.data.length - 1].count += num;
+    } else {
+      this.data.push({ day, count: num });
+    }
+    if (this.data.length > this.daysToRemember) {
+      this.data.splice(0, this.data.length - this.daysToRemember);
+    }
+  }
+  today(): string {
+    return new Date().toISOString().substr(0, 10);
+  }
+  getStats() {
+    return this.data;
+  }
+}

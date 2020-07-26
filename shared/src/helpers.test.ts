@@ -5,6 +5,7 @@ import {
   bnAddZeroes,
   findLowestClosestIndexToBlock,
   normalizeAddress,
+  DailyStats,
 } from './helpers';
 import { EventHistory } from './model';
 
@@ -86,5 +87,39 @@ describe('normalizeAddress', () => {
     expect(normalizeAddress('123abc')).toEqual('0x123abc');
     expect(normalizeAddress('123AbC')).toEqual('0x123abc');
     expect(normalizeAddress('0X123ABC')).toEqual('0x123abc');
+  });
+});
+
+describe('DailyStats', () => {
+  it('works', () => {
+    const d = new DailyStats(2);
+    expect(d.getStats()).toEqual([]);
+    d.today = () => '2020-01-01';
+    d.add(1);
+    expect(d.getStats()).toEqual([{ day: '2020-01-01', count: 1 }]);
+    d.add(2);
+    expect(d.getStats()).toEqual([{ day: '2020-01-01', count: 3 }]);
+    d.today = () => '2020-01-02';
+    d.add(4);
+    expect(d.getStats()).toEqual([
+      { day: '2020-01-01', count: 3 },
+      { day: '2020-01-02', count: 4 },
+    ]);
+    d.add(5);
+    expect(d.getStats()).toEqual([
+      { day: '2020-01-01', count: 3 },
+      { day: '2020-01-02', count: 9 },
+    ]);
+    d.today = () => '2020-01-03';
+    d.add(6);
+    expect(d.getStats()).toEqual([
+      { day: '2020-01-02', count: 9 },
+      { day: '2020-01-03', count: 6 },
+    ]);
+    d.add(1);
+    expect(d.getStats()).toEqual([
+      { day: '2020-01-02', count: 9 },
+      { day: '2020-01-03', count: 7 },
+    ]);
   });
 });

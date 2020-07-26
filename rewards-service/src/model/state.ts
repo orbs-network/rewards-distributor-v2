@@ -1,4 +1,4 @@
-import { EventHistory } from 'rewards-v2';
+import { EventHistory, DailyStatsData } from 'rewards-v2';
 
 export const NUM_LAST_TRANSACTIONS = 10;
 
@@ -10,6 +10,7 @@ export class State {
   LastDistributions: { [distributionName: string]: DistributionStats } = {};
   InProgressDistribution?: DistributionStats;
   LastTransactions: EthereumTxStatus[] = [];
+  EventRequestStats: DailyStatsData = [];
 }
 
 // helpers
