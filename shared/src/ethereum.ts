@@ -24,7 +24,7 @@ export class EthereumAdapter {
     Delegations?: Contract;
     Rewards?: Contract;
   } = {};
-  public readEventsStats = new DailyStats();
+  public requestStats = new DailyStats();
 
   setContracts(web3: Web3, contractAddresses: EthereumContractAddresses) {
     this.web3 = web3;
@@ -55,7 +55,7 @@ export class EthereumAdapter {
       toBlock: toBlock,
     };
     if (filter) options.filter = filter;
-    this.readEventsStats.add(1);
+    this.requestStats.add(1);
     const res = await ethereumContract.getPastEvents(event, options);
     return res;
   }

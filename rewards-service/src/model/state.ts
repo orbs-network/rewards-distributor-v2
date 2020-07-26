@@ -10,7 +10,7 @@ export class State {
   LastDistributions: { [distributionName: string]: DistributionStats } = {};
   InProgressDistribution?: DistributionStats;
   LastTransactions: EthereumTxStatus[] = [];
-  EventRequestStats: DailyStatsData = [];
+  EthereumRequestStats: DailyStatsData = [];
 }
 
 // helpers

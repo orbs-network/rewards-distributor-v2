@@ -58,7 +58,7 @@ export class Distributor {
           historyAutoscaleOptions
         );
         this.state.LastHistoryBatchTime = getCurrentClockTime();
-        this.state.EventRequestStats = this.historyDownloader.ethereum.readEventsStats.getStats();
+        this.state.EthereumRequestStats = this.historyDownloader.ethereum.requestStats.getStats();
         Logger.log(`Distributor: processed history batch up to ${this.state.HistoryMaxProcessedBlock}.`);
       } catch (err) {
         Logger.error(err.stack);

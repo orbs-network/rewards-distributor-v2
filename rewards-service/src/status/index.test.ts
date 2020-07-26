@@ -46,7 +46,7 @@ describe('status task', () => {
       TimeToNextDistribution: 0,
       LastDistributions: {},
       LastTransactions: [],
-      EventRequestStats: [],
+      EthereumRequestStats: [],
       Config: exampleConfig,
     });
   });
