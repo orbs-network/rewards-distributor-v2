@@ -27,7 +27,11 @@ export class Distributor {
   private split: { fractionForDelegators: number };
 
   constructor(private state: State, private config: DistributorConfiguration) {
-    this.web3 = new Web3(new Web3.providers.HttpProvider(config.EthereumEndpoint));
+    this.web3 = new Web3(
+      new Web3.providers.HttpProvider(config.EthereumEndpoint, {
+        keepAlive: true,
+      })
+    );
     this.signer = new Signer(config.SignerEndpoint);
     this.contractAddresses = {
       Delegations: config.EthereumDelegationsContract,

@@ -3,9 +3,13 @@ import Web3 from 'web3';
 import Signer from 'orbs-signer-client';
 import * as Logger from '../logger';
 import { TransactionBatch, Distribution } from 'rewards-v2';
-import { jsonStringifyComplexTypes, getCurrentClockTime, sleep } from '../helpers';
+import { jsonStringifyComplexTypes, getCurrentClockTime, sleep, toNumber } from '../helpers';
 import { State, EthereumTxStatus, GasPriceStrategy, NUM_LAST_TRANSACTIONS } from '../model/state';
 import { distributionName } from './helpers';
+import { TransactionConfig } from 'web3-core';
+
+const GAS_LIMIT_ESTIMATE_EXTRA = 100000;
+const GAS_LIMIT_HARD_LIMIT = 2000000;
 
 export interface EthereumTxParams {
   SignerEndpoint: string;
@@ -118,14 +122,26 @@ async function signAndSendTransaction(
 ): Promise<string> {
   const nonce = await web3.eth.getTransactionCount(senderAddress, 'latest'); // ignore pending pool
 
-  const txObject = {
+  const txObject: TransactionConfig = {
     from: senderAddress,
     to: contractAddress,
     gasPrice: gasPrice,
-    gas: 10000000, // TODO: fix with real value
     data: encodedAbi,
     nonce: nonce,
   };
+
+  let gasLimit = toNumber(await web3.eth.estimateGas(txObject));
+  if (gasLimit <= 0) {
+    throw new Error(`Cannot estimate gas for tx with data ${encodedAbi}.`);
+  }
+  gasLimit += GAS_LIMIT_ESTIMATE_EXTRA;
+  if (gasLimit > GAS_LIMIT_HARD_LIMIT) {
+    throw new Error(`Gas limit estimate ${gasLimit} over hard limit ${GAS_LIMIT_HARD_LIMIT}.`);
+  }
+  txObject.gas = gasLimit;
+
+  Logger.log(`About to sign and send tx object: ${jsonStringifyComplexTypes(txObject)}.`);
+
   const { rawTransaction, transactionHash } = await signer.sign(txObject);
   if (!rawTransaction || !transactionHash) {
     throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);

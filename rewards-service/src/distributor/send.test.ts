@@ -28,6 +28,10 @@ function getMockWeb3Client(behavior: 'success' | 'badsend' | 'pending' | 'revert
         if (behavior == 'overmax') return '999000000000';
         return '40000000000';
       },
+      estimateGas: async () => {
+        await sleep(0);
+        return 500000;
+      },
       sendSignedTransaction: async () => {
         await sleep(0);
         if (behavior == 'badsend') throw new Error('send error');
