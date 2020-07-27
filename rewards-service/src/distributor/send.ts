@@ -147,8 +147,17 @@ async function signAndSendTransaction(
     throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);
   }
 
-  await web3.eth.sendSignedTransaction(rawTransaction);
-  return transactionHash;
+  return new Promise<string>((resolve, reject) => {
+    // normally this returns a promise that resolves on receipt, but we ignore this mechanism and have our own
+    web3.eth
+      .sendSignedTransaction(rawTransaction, (err) => {
+        if (err) reject(err);
+        else resolve(transactionHash);
+      })
+      .catch(() => {
+        // do nothing (ignore the web3 promise)
+      });
+  });
 }
 
 async function readPendingTransactionStatus(web3: Web3, status: EthereumTxStatus, config: EthereumTxParams) {

@@ -32,6 +32,9 @@ export class Distributor {
         keepAlive: true,
       })
     );
+    this.web3.eth.transactionBlockTimeout = 0; // to stop web3 from polling pending tx
+    this.web3.eth.transactionPollingTimeout = 0; // to stop web3 from polling pending tx
+    this.web3.eth.transactionConfirmationBlocks = 1; // to stop web3 from polling pending tx
     this.signer = new Signer(config.SignerEndpoint);
     this.contractAddresses = {
       Delegations: config.EthereumDelegationsContract,

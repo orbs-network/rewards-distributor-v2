@@ -32,9 +32,10 @@ function getMockWeb3Client(behavior: 'success' | 'badsend' | 'pending' | 'revert
         await sleep(0);
         return 500000;
       },
-      sendSignedTransaction: async () => {
+      sendSignedTransaction: async (_tx: unknown, callback: (err?: Error) => void) => {
         await sleep(0);
-        if (behavior == 'badsend') throw new Error('send error');
+        if (behavior == 'badsend') callback(new Error('send error'));
+        else callback();
       },
       getTransaction: async () => {
         await sleep(0);
