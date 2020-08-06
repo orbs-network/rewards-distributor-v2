@@ -1,10 +1,10 @@
 import _ from 'lodash';
 import Web3 from 'web3';
 import BN from 'bn.js';
-import { EthereumContractAddresses } from '.';
-import { EventData, Contract, PastEventOptions } from 'web3-eth-contract';
+import { Contract, PastEventOptions, EventData } from 'web3-eth-contract';
 import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/release/compiled-contracts';
-import { sleep, DailyStats } from './helpers';
+import { sleep, DailyStats } from '../helpers';
+import { EventName, contractByEventName, getContractTypeName, EventFilter } from './types';
 
 const CONFIRMATION_POLL_INTERVAL_SECONDS = 5;
 const GAS_LIMIT_PER_TX = 10000000; // TODO: improve
@@ -19,45 +19,38 @@ export type TransactionBatch = {
 }[];
 
 export class EthereumAdapter {
-  public web3?: Web3;
-  public contracts: {
-    Delegations?: Contract;
-    Rewards?: Contract;
-  } = {};
+  public rewardsContract?: Contract;
   public requestStats = new DailyStats();
 
-  setContracts(web3: Web3, contractAddresses: EthereumContractAddresses) {
-    this.web3 = web3;
-    if (contractAddresses.Delegations) {
-      // TODO: replace this line with a nicer way to get the abi's
-      const abi = compiledContracts.Delegations.abi;
-      this.contracts.Delegations = new web3.eth.Contract(abi, contractAddresses.Delegations);
-    }
-    if (contractAddresses.Rewards) {
-      const abi = compiledContracts.Rewards.abi;
-      this.contracts.Rewards = new web3.eth.Contract(abi, contractAddresses.Rewards);
-    }
+  constructor(public web3: Web3) {}
+
+  setRewardsContract(address: string) {
+    if (this.rewardsContract?.options.address == address) return;
+    const abi = compiledContracts.Rewards.abi;
+    this.rewardsContract = new this.web3.eth.Contract(abi, address);
   }
 
-  async readEvents(
-    contract: 'Delegations' | 'Rewards',
-    event: string,
-    fromBlock: number,
-    toBlock: number,
-    filter?: { [key: string]: number | string }
+  getContractForEvent(eventName: EventName, address: string): Contract {
+    const contractName = contractByEventName(eventName);
+    const abi = compiledContracts[getContractTypeName(contractName)].abi;
+    return new this.web3.eth.Contract(abi, address);
+  }
+
+  // throws error if fails, caller needs to decrease page size if needed
+  async getPastEvents(
+    eventName: EventName,
+    { fromBlock, toBlock }: PastEventOptions,
+    contract?: Contract,
+    filter?: EventFilter
   ): Promise<EventData[]> {
-    const ethereumContract = this.contracts[contract];
-    if (!ethereumContract) {
-      throw new Error(`Ethereum contract '${contract}' is undefined, did you call setEthereumContracts?`);
-    }
+    if (!contract) return [];
     const options: PastEventOptions = {
       fromBlock: fromBlock,
       toBlock: toBlock,
     };
     if (filter) options.filter = filter;
     this.requestStats.add(1);
-    const res = await ethereumContract.getPastEvents(event, options);
-    return res;
+    return contract.getPastEvents(eventName, options);
   }
 
   // returns txHashes, but only after numConfirmations is reached
@@ -71,7 +64,7 @@ export class EthereumAdapter {
     confirmationTimeoutSeconds: number,
     progressCallback?: TxProgressNotification
   ): Promise<string[]> {
-    if (!this.web3 || !this.contracts.Rewards) {
+    if (!this.web3 || !this.rewardsContract) {
       throw new Error(`Ethereum contract 'Rewards' is undefined, did you call setEthereumContracts?`);
     }
 
@@ -79,10 +72,10 @@ export class EthereumAdapter {
     const request = new this.web3.BatchRequest();
     const promises: Promise<string>[] = _.map(batch, (txData) => {
       return new Promise((resolve, reject) => {
-        if (!this.contracts.Rewards) {
+        if (!this.rewardsContract) {
           return reject(new Error(`Ethereum contract 'Rewards' is undefined, did you call setEthereumContracts?`));
         }
-        const tx = this.contracts.Rewards.methods
+        const tx = this.rewardsContract.methods
           .distributeOrbsTokenStakingRewards(
             txData.totalAmount.toString(), // uint256 totalAmount
             fromBlock, // uint256 fromBlock

@@ -4,11 +4,6 @@ export { HistoryDownloader } from './history-downloader';
 // the main external api to distribute rewards
 export { Distribution } from './distributor';
 
-export interface EthereumContractAddresses {
-  Delegations: string;
-  Rewards: string;
-}
-
 export { EventHistory } from './model';
-export { TransactionBatch } from './ethereum';
+export { TransactionBatch } from './ethereum/ethereum-adapter';
 export { normalizeAddress, DailyStatsData } from './helpers';

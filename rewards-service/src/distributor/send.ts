@@ -28,10 +28,10 @@ export async function sendTransactionBatch(
   state: State,
   config: EthereumTxParams
 ) {
-  const web3 = distribution.ethereum.web3;
-  if (!web3) throw new Error(`web3 is undefined, did you call setEthereumContracts?`);
-  const contract = distribution.ethereum.contracts.Rewards;
-  if (!contract) throw new Error(`Ethereum contract 'Rewards' is undefined, did you call setEthereumContracts?`);
+  const web3 = distribution.ethereum?.web3;
+  if (!web3) throw new Error(`web3 is undefined, did you call setRewardsContract?`);
+  const contract = distribution.ethereum?.rewardsContract;
+  if (!contract) throw new Error(`Ethereum rewards contract is undefined, did you call setRewardsContract?`);
 
   for (const txData of batch) {
     // we're handling the transactions to send slowly one at a time

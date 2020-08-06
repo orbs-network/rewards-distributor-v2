@@ -1,8 +1,7 @@
 export interface Configuration {
   EthereumEndpoint: string;
   SignerEndpoint: string;
-  EthereumDelegationsContract: string;
-  EthereumRewardsContract: string;
+  EthereumGenesisContract: string;
   GuardianAddress: string;
   NodeOrbsAddress: string;
   StatusJsonPath: string;
@@ -23,7 +22,8 @@ export const defaultConfiguration = {
   StatusJsonPath: './status/status.json',
   StatusPollTimeSeconds: 20,
   DistributorWakeIntervalSeconds: 5 * 60,
-  EthereumFirstBlock: 0,
+  EthereumGenesisContract: '0x10bFdCc77E998Eb849a18c79b880F8b9BE06Ad83',
+  EthereumFirstBlock: 10503000,
   DistributionFrequencySeconds: 14 * 24 * 60 * 60,
   EthereumPendingTxPollTimeSeconds: 3 * 60,
   RewardFractionForDelegators: 0.7,
@@ -41,17 +41,11 @@ export function validateConfiguration(config: Configuration) {
   if (!config.SignerEndpoint) {
     throw new Error(`SignerEndpoint is empty in config.`);
   }
-  if (!config.EthereumDelegationsContract) {
-    throw new Error(`EthereumDelegationsContract is empty in config.`);
+  if (!config.EthereumGenesisContract) {
+    throw new Error(`EthereumGenesisContract is empty in config.`);
   }
-  if (!config.EthereumDelegationsContract.startsWith('0x')) {
-    throw new Error(`EthereumDelegationsContract does not start with "0x".`);
-  }
-  if (!config.EthereumRewardsContract) {
-    throw new Error(`EthereumRewardsContract is empty in config.`);
-  }
-  if (!config.EthereumRewardsContract.startsWith('0x')) {
-    throw new Error(`EthereumRewardsContract does not start with "0x".`);
+  if (!config.EthereumGenesisContract.startsWith('0x')) {
+    throw new Error(`EthereumGenesisContract does not start with "0x".`);
   }
   if (!config.GuardianAddress) {
     throw new Error(`GuardianAddress is empty in config.`);

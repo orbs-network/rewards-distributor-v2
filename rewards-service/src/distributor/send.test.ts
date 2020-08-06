@@ -83,9 +83,7 @@ function getMockDistribution(web3?: Web3, rewards?: Contract) {
   return ({
     ethereum: {
       web3: web3 ?? getMockWeb3Client(),
-      contracts: {
-        Rewards: rewards ?? getMockRewardsContract(),
-      },
+      rewardsContract: rewards ?? getMockRewardsContract(),
     },
     firstBlock: 6666,
     lastBlock: 7777,

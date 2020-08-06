@@ -19,8 +19,7 @@ export class TestEnvironment {
     return {
       EthereumEndpoint: 'http://ganache:7545',
       SignerEndpoint: 'http://signer:7777',
-      EthereumDelegationsContract: this.sharedTestkit.ethereumContractAddresses?.Delegations,
-      EthereumRewardsContract: this.sharedTestkit.ethereumContractAddresses?.Rewards,
+      EthereumGenesisContract: this.sharedTestkit.getContractRegistryAddress(),
       GuardianAddress: this.sharedTestkit.delegateAddress,
       NodeOrbsAddress: this.sharedTestkit.delegateOrbsAddress?.substr(2).toLowerCase(), // remove "0x",
       StatusJsonPath: './status/status.json',

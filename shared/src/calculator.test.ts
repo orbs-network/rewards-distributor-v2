@@ -4,7 +4,8 @@ import { Calculator } from './calculator';
 import { DelegationsAccumulator } from './event-accumulator';
 
 const getHistoryWithAssignments = () => {
-  const h = new EventHistory('G1', 2);
+  const h = new EventHistory('G1');
+  h.startingBlock = 2;
   h.assignmentEvents.push({ block: 3, amount: new BN(100) });
   h.assignmentEvents.push({ block: 6, amount: new BN(200) });
   h.assignmentEvents.push({ block: 9, amount: new BN(300) });
@@ -48,7 +49,8 @@ describe('calcDivisionForSingleAssignment', () => {
   });
 
   const getHistoryWithEverythingForSimpleAssignment = () => {
-    const h = new EventHistory('G1', 1);
+    const h = new EventHistory('G1');
+    h.startingBlock = 1;
     // assignments
     h.assignmentEvents.push({ block: 5, amount: new BN(10000) });
     h.assignmentEvents.push({ block: 10, amount: new BN(20000) });

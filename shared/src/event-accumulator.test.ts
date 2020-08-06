@@ -3,13 +3,13 @@ import { DelegationsAccumulator } from './event-accumulator';
 import BN from 'bn.js';
 
 const getEmptyBlockHistory = (size: number) => {
-  const h = new EventHistory('G1', 0);
+  const h = new EventHistory('G1');
   h.lastProcessedBlock = size;
   return h;
 };
 
 const getHistoryWithDelegationChanges = () => {
-  const h = new EventHistory('G1', 0);
+  const h = new EventHistory('G1');
   h.delegationChangeEvents.push({ block: 2, delegatorAddress: 'D1', newDelegatedStake: new BN(100) });
   h.delegationChangeEvents.push({ block: 4, delegatorAddress: 'D2', newDelegatedStake: new BN(300) });
   h.delegationChangeEvents.push({ block: 6, delegatorAddress: 'D1', newDelegatedStake: new BN(200) });

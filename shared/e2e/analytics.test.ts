@@ -5,9 +5,11 @@ jest.setTimeout(60000);
 
 describe('analytics', () => {
   const driver = new TestkitDriver();
+  let startingBlock = -1;
 
   beforeAll(async () => {
     log('deploying Orbs PoS V2 contracts');
+    startingBlock = await driver.getCurrentBlockPreDeploy();
     await driver.deployOrbsV2Contracts();
 
     log('preparing the scenario');
@@ -26,15 +28,21 @@ describe('analytics', () => {
     log(`latest ethereum block: ${latestEthereumBlock}`);
 
     // create a history downloader
-    const historyDownloader = new HistoryDownloader(driver.delegateAddress!, 0, true);
-    historyDownloader.setEthereumContracts(driver.web3, driver.ethereumContractAddresses!);
+    const historyDownloader = new HistoryDownloader(driver.delegateAddress!, true);
+    historyDownloader.setGenesisContract(driver.web3, driver.getContractRegistryAddress(), startingBlock, {
+      initialPageSize: 10,
+      maxPageSize: 1000,
+      minPageSize: 1,
+      pageGrowAfter: 3,
+    });
 
     // download history up to this block
     let maxProcessedBlock = 0;
     while (maxProcessedBlock < latestEthereumBlock) {
-      maxProcessedBlock = await historyDownloader.processNextBatch(100, latestEthereumBlock);
-      log(`processed up to block: ${maxProcessedBlock}`);
+      maxProcessedBlock = await historyDownloader.processNextBlock(latestEthereumBlock);
+      if (maxProcessedBlock % 100 == 0) log(`processed up to block: ${maxProcessedBlock}`);
     }
+    log(`processed up to block: ${maxProcessedBlock}`);
 
     // log history result
     for (const [delegateAddress, delegateHistory] of Object.entries(historyDownloader.extraHistoryPerDelegate)) {
@@ -45,8 +53,9 @@ describe('analytics', () => {
     expect(Object.keys(historyDownloader.extraHistoryPerDelegate).length).toEqual(4 + 7);
     for (const [delegateAddress, delegateHistory] of Object.entries(historyDownloader.extraHistoryPerDelegate)) {
       expect(delegateHistory.delegateAddress).toEqual(delegateAddress);
-      expect(delegateHistory.startingBlock).toEqual(0);
+      expect(delegateHistory.startingBlock).toEqual(startingBlock);
       expect(delegateHistory.lastProcessedBlock).toEqual(latestEthereumBlock);
+      expect(delegateHistory.contractAddresses).toEqual({});
       expect(delegateHistory.delegationChangeEvents.length).toBeGreaterThan(0);
       expect(delegateHistory.delegationChangeEvents[0].delegatorAddress).toEqual(delegateAddress);
     }

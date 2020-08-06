@@ -38,15 +38,21 @@ describe('resume distribution', () => {
 
     // create a history downloader
     const delegateAddressWeirdCase = driver.delegateAddress!.toUpperCase();
-    const historyDownloader = new HistoryDownloader(delegateAddressWeirdCase, 0);
-    historyDownloader.setEthereumContracts(driver.web3, driver.ethereumContractAddresses!);
+    const historyDownloader = new HistoryDownloader(delegateAddressWeirdCase);
+    historyDownloader.setGenesisContract(driver.web3, driver.getContractRegistryAddress(), 0, {
+      initialPageSize: 10,
+      maxPageSize: 1000,
+      minPageSize: 1,
+      pageGrowAfter: 3,
+    });
 
     // download history up to this block
     let maxProcessedBlock = 0;
     while (maxProcessedBlock < latestEthereumBlock) {
-      maxProcessedBlock = await historyDownloader.processNextBatch(100, latestEthereumBlock);
-      log(`processed up to block: ${maxProcessedBlock}`);
+      maxProcessedBlock = await historyDownloader.processNextBlock(latestEthereumBlock);
+      if (maxProcessedBlock % 100 == 0) log(`processed up to block: ${maxProcessedBlock}`);
     }
+    log(`processed up to block: ${maxProcessedBlock}`);
 
     // log history result
     console.log('history:', JSON.stringify(historyDownloader.history, null, 2));
@@ -55,6 +61,11 @@ describe('resume distribution', () => {
     expect(historyDownloader.history.delegateAddress).toEqual(driver.delegateAddress);
     expect(historyDownloader.history.startingBlock).toEqual(0);
     expect(historyDownloader.history.lastProcessedBlock).toEqual(latestEthereumBlock);
+    expect(historyDownloader.history.contractAddresses).toEqual({
+      contractRegistry: driver.getContractRegistryAddress(),
+      delegations: driver.getContractAddress('delegations'),
+      rewards: driver.getContractAddress('rewards'),
+    });
     expect(historyDownloader.history.delegationChangeEvents.length).toBeGreaterThan(0);
     expect(historyDownloader.history.delegationChangeEvents[0].delegatorAddress).toEqual(driver.delegateAddress);
     expect(historyDownloader.history.assignmentEvents.length).toBeGreaterThan(0);
@@ -66,7 +77,7 @@ describe('resume distribution', () => {
     // create a new distribution of rewards up to this block
     const distribution = Distribution.getLastDistribution(latestEthereumBlock, historyDownloader.history);
     if (distribution == null) throw new Error(`distribution is null`);
-    distribution.setEthereumContracts(driver.web3, driver.ethereumContractAddresses!);
+    distribution.setRewardsContract(driver.web3, historyDownloader.history.contractAddresses.rewards);
 
     // log division result
     console.log('division:', JSON.stringify(distribution.division, null, 2));
