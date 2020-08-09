@@ -42,7 +42,7 @@ describe('bnAddZeroes', () => {
 
 describe('findClosestIndexToBlock', () => {
   it('can match actual history events', () => {
-    const h = new EventHistory('G1', 0);
+    const h = new EventHistory('G1');
     h.assignmentEvents.push({ block: 3, amount: new BN(100) });
     h.assignmentEvents.push({ block: 7, amount: new BN(101) });
     h.assignmentEvents.push({ block: 12, amount: new BN(102) });

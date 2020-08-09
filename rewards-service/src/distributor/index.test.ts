@@ -10,8 +10,11 @@ import { getCurrentClockTime } from '../helpers';
 jest.mock('rewards-v2', () => {
   return {
     HistoryDownloader: class {
-      setEthereumContracts = () => {};
-      processNextBatchAutoscale = () => 117;
+      setGenesisContract = () => {};
+      processNextBlock = () => 117;
+      history = {
+        contractAddresses: { rewards: '0x123' },
+      };
     },
     Distribution: class {
       static getLastDistribution = jest.fn().mockImplementation(() => null);
@@ -44,12 +47,12 @@ function getConfiguation(genesisBlock = 0) {
 function getMockDistribution(complete = true, firstTransferBlock = 80) {
   return ({
     isDistributionComplete: () => complete,
-    setEthereumContracts: () => {},
+    setRewardsContract: () => {},
     prepareTransactionBatch: jest.fn().mockImplementation(() => []),
     getPreviousTransfers: () => [{ block: firstTransferBlock }],
     ethereum: {
       web3: {},
-      contracts: { Rewards: {} },
+      rewardsContract: {},
     },
     firstBlock: firstTransferBlock - 20 + 1,
     lastBlock: firstTransferBlock - 10,

@@ -22,7 +22,7 @@ export class StatusWriter {
         Uptime: getCurrentClockTime() - timeOriginallyLaunched,
         MemoryBytesUsed: process.memoryUsage().heapUsed,
         HistoryMaxProcessedBlock: this.state.HistoryMaxProcessedBlock,
-        LastHistoryBatchTime: this.state.LastHistoryBatchTime,
+        LastHistoryFetchTime: this.state.LastHistoryFetchTime,
         HistoryTotalAssignmentEvents: this.state.EventHistory?.assignmentEvents.length ?? 0,
         HistoryTotalDistributionEvents: this.state.EventHistory?.distributionEvents.length ?? 0,
         TimeToNextDistribution: this.state.TimeToNextDistribution,
@@ -57,7 +57,7 @@ export class StatusWriter {
 function getStatusText(state: State) {
   const res = [];
   const now = getCurrentClockTime();
-  const historyBatchAgo = now - state.LastHistoryBatchTime;
+  const historyBatchAgo = now - state.LastHistoryFetchTime;
   res.push(`history block = ${state.HistoryMaxProcessedBlock} (updated ${historyBatchAgo} sec ago)`);
   res.push(`next distribution in ${state.TimeToNextDistribution} sec`);
   if (state.LastTransactions.length > 0) {
@@ -69,7 +69,7 @@ function getStatusText(state: State) {
 function getErrorText(state: State, config: Configuration) {
   const res = [];
   const now = getCurrentClockTime();
-  const historyBatchAgo = now - state.LastHistoryBatchTime;
+  const historyBatchAgo = now - state.LastHistoryFetchTime;
   if (historyBatchAgo > HISTORY_BATCH_TIME_ALLOWED_DELAY) {
     res.push(`History last update time is too old (${historyBatchAgo} sec ago).`);
   }

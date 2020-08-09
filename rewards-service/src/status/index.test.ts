@@ -40,7 +40,7 @@ describe('status task', () => {
       Uptime: writtenContents.Payload.Uptime,
       MemoryBytesUsed: writtenContents.Payload.MemoryBytesUsed,
       HistoryMaxProcessedBlock: 0,
-      LastHistoryBatchTime: 0,
+      LastHistoryFetchTime: 0,
       HistoryTotalAssignmentEvents: 0,
       HistoryTotalDistributionEvents: 0,
       TimeToNextDistribution: 0,

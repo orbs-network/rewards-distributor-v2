@@ -4,7 +4,7 @@ export const NUM_LAST_TRANSACTIONS = 10;
 
 export class State {
   HistoryMaxProcessedBlock = 0;
-  LastHistoryBatchTime = 0; // UTC seconds
+  LastHistoryFetchTime = 0; // UTC seconds
   EventHistory?: EventHistory;
   TimeToNextDistribution = 0; // seconds
   LastDistributions: { [distributionName: string]: DistributionStats } = {};

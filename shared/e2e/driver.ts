@@ -1,10 +1,11 @@
 import { Driver as OrbsV2Driver } from '@orbs-network/orbs-ethereum-contracts-v2';
 import { Web3Driver } from '@orbs-network/orbs-ethereum-contracts-v2/release/eth';
-import { EthereumContractAddresses } from '../src';
 import Web3 from 'web3';
 import BN from 'bn.js';
 import { bnAddZeroes, normalizeAddress } from '../src/helpers';
 import { DriverOptions } from '@orbs-network/orbs-ethereum-contracts-v2/release/test/driver';
+import { ContractName } from '../src/ethereum/types';
+import { EventData } from 'web3-eth-contract';
 
 const SCENARIO_MAX_COMMITTEE_SIZE = 3;
 const MONTH_IN_SECONDS = 60 * 60 * 24 * 30;
@@ -12,7 +13,6 @@ const MONTH_IN_SECONDS = 60 * 60 * 24 * 30;
 export class TestkitDriver {
   public web3: Web3;
   public orbsV2Driver?: OrbsV2Driver;
-  public ethereumContractAddresses?: EthereumContractAddresses;
   public delegateAddress?: string;
   public delegateOrbsAddress?: string;
 
@@ -26,10 +26,18 @@ export class TestkitDriver {
     };
     if (customWeb3Provider) options.web3Provider = customWeb3Provider;
     this.orbsV2Driver = await OrbsV2Driver.new(options);
-    this.ethereumContractAddresses = {
-      Delegations: this.orbsV2Driver.delegations.address,
-      Rewards: this.orbsV2Driver.rewards.address,
-    };
+  }
+
+  getContractRegistryAddress(): string {
+    const d = this.orbsV2Driver;
+    if (!d) throw new Error(`Call deployOrbsV2Contracts before getContractRegistryAddress.`);
+    return d.contractRegistry.address;
+  }
+
+  getContractAddress(contractName: ContractName): string {
+    const d = this.orbsV2Driver;
+    if (!d) throw new Error(`Call deployOrbsV2Contracts before getContractAddress.`);
+    return d[contractName].address;
   }
 
   async closeConnections() {
@@ -117,7 +125,7 @@ export class TestkitDriver {
     await d.rewards.assignRewards();
   }
 
-  async getNewDistributionEvents(fromBlock: number) {
+  async getNewDistributionEvents(fromBlock: number): Promise<EventData[]> {
     const res = await this.orbsV2Driver?.rewards.web3Contract.getPastEvents('StakingRewardsDistributed', {
       fromBlock: fromBlock,
       toBlock: 'latest',
@@ -158,6 +166,10 @@ export class TestkitDriver {
     const d = this.orbsV2Driver;
     if (!d) throw new Error(`Call deployOrbsV2Contracts before getCurrentBlock.`);
     return await d.web3.eth.getBlockNumber();
+  }
+
+  async getCurrentBlockPreDeploy(): Promise<number> {
+    return await this.web3.eth.getBlockNumber();
   }
 }
 

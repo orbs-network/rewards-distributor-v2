@@ -1,3 +1,4 @@
+import { ContractName } from './ethereum/types';
 import BN from 'bn.js';
 
 // the main data model
@@ -6,7 +7,9 @@ export class EventHistory {
   public delegationChangeEvents: DelegationChangeEvent[] = [];
   public assignmentEvents: AssignmentEvent[] = [];
   public distributionEvents: DistributionEvent[] = [];
-  constructor(public delegateAddress: string, public startingBlock: number) {}
+  public contractAddresses: { [t in ContractName]?: string } = {}; // current, updated to lastProcessedBlock
+  public startingBlock = 0;
+  constructor(public delegateAddress: string) {}
 }
 
 // internal abstracted model to hold delegation events

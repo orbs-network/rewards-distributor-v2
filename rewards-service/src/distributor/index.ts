@@ -1,29 +1,28 @@
 import { State } from '../model/state';
 import * as Logger from '../logger';
-import { HistoryDownloader, Distribution, EthereumContractAddresses } from 'rewards-v2';
+import { HistoryDownloader, Distribution } from 'rewards-v2';
 import Web3 from 'web3';
 import { getCurrentClockTime } from '../helpers';
-import { historyAutoscaleOptions, distributionName, distributionStats } from './helpers';
+import { distributionName, distributionStats } from './helpers';
 import { toNumber } from '../helpers';
 import { sendTransactionBatch, EthereumTxParams } from './send';
 import Signer from 'orbs-signer-client';
 
 export type DistributorConfiguration = EthereumTxParams & {
   EthereumEndpoint: string;
-  EthereumDelegationsContract: string;
-  EthereumRewardsContract: string;
+  EthereumGenesisContract: string;
   GuardianAddress: string;
   EthereumFirstBlock: number;
   DistributionFrequencySeconds: number;
   RewardFractionForDelegators: number;
   MaxRecipientsPerRewardsTx: number;
+  EthereumRequestsPerSecondLimit: number;
 };
 
 export class Distributor {
   public web3: Web3;
   private signer: Signer;
   private historyDownloader: HistoryDownloader;
-  private contractAddresses: EthereumContractAddresses;
   private split: { fractionForDelegators: number };
 
   constructor(private state: State, private config: DistributorConfiguration) {
@@ -36,13 +35,15 @@ export class Distributor {
     this.web3.eth.transactionPollingTimeout = 0; // to stop web3 from polling pending tx
     this.web3.eth.transactionConfirmationBlocks = 1; // to stop web3 from polling pending tx
     this.signer = new Signer(config.SignerEndpoint);
-    this.contractAddresses = {
-      Delegations: config.EthereumDelegationsContract,
-      Rewards: config.EthereumRewardsContract,
-    };
     this.split = { fractionForDelegators: config.RewardFractionForDelegators };
-    this.historyDownloader = new HistoryDownloader(config.GuardianAddress, config.EthereumFirstBlock);
-    this.historyDownloader.setEthereumContracts(this.web3, this.contractAddresses);
+    this.historyDownloader = new HistoryDownloader(config.GuardianAddress);
+    this.historyDownloader.setGenesisContract(
+      this.web3,
+      config.EthereumGenesisContract,
+      config.EthereumFirstBlock,
+      {},
+      config.EthereumRequestsPerSecondLimit
+    );
     state.EventHistory = this.historyDownloader.history;
     state.HistoryMaxProcessedBlock = config.EthereumFirstBlock;
     Logger.log(`Distributor: initialized with first block ${state.HistoryMaxProcessedBlock}.`);
@@ -55,21 +56,9 @@ export class Distributor {
 
     // start by downloading history (syncing events)
     while (this.state.HistoryMaxProcessedBlock < latestEthereumBlock) {
-      try {
-        this.state.HistoryMaxProcessedBlock = await this.historyDownloader.processNextBatchAutoscale(
-          latestEthereumBlock,
-          historyAutoscaleOptions
-        );
-        this.state.LastHistoryBatchTime = getCurrentClockTime();
-        this.state.EthereumRequestStats = this.historyDownloader.ethereum.requestStats.getStats();
-        Logger.log(`Distributor: processed history batch up to ${this.state.HistoryMaxProcessedBlock}.`);
-      } catch (err) {
-        Logger.error(err.stack);
-        if (this.historyDownloader.autoscaleConsecutiveFailures >= 3) {
-          Logger.log(`Distributor: history failing too often, going to sleep for a while.`);
-          return;
-        }
-      }
+      this.state.HistoryMaxProcessedBlock = await this.historyDownloader.processNextBlock(latestEthereumBlock);
+      this.state.LastHistoryFetchTime = getCurrentClockTime();
+      this.state.EthereumRequestStats = this.historyDownloader.ethereum?.requestStats.getStats() ?? [];
     }
 
     // log progress
@@ -141,7 +130,11 @@ export class Distributor {
 
   async completeDistribution(distribution: Distribution) {
     this.state.InProgressDistribution = distributionStats(distribution, getCurrentClockTime(), false);
-    distribution.setEthereumContracts(this.web3, this.contractAddresses);
+    distribution.setRewardsContract(
+      this.web3,
+      this.historyDownloader.history.contractAddresses.rewards,
+      this.config.EthereumRequestsPerSecondLimit
+    );
     const batch = distribution.prepareTransactionBatch(this.config.MaxRecipientsPerRewardsTx);
     await sendTransactionBatch(batch, distribution, this.signer, this.state, this.config);
   }

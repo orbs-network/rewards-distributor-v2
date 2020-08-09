@@ -17,7 +17,7 @@ describe('validateConfiguration', () => {
 
   it('fails on invalid EthereumElectionsContract', () => {
     const invalidConfig = _.cloneDeep(exampleConfig);
-    invalidConfig.EthereumRewardsContract = 'hello world';
+    invalidConfig.EthereumGenesisContract = 'hello world';
     expect(() => validateConfiguration(invalidConfig)).toThrow();
   });
 

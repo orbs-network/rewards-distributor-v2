@@ -1,79 +1,120 @@
 import _ from 'lodash';
 import BN from 'bn.js';
 import { EventData } from 'web3-eth-contract';
-import pLimit from 'p-limit';
 import Web3 from 'web3';
-import { EthereumContractAddresses } from '.';
-import { EthereumAdapter } from './ethereum';
+import { EthereumAdapter } from './ethereum/ethereum-adapter';
 import { EventHistory } from './model';
 import { normalizeAddress } from './helpers';
+import { EventName, eventNames, contractByEventName } from './ethereum/types';
+import { EventFetcher } from './ethereum/event-fetcher';
+import { LookaheadEventFetcher, AutoscaleOptions } from './ethereum/event-fetcher-lookahead';
 
-const DEFAULT_CONCURRENCY = 5;
-
-// the main external api to populate the data model (synchronize over all event history)
 export class HistoryDownloader {
   public history: EventHistory;
   public extraHistoryPerDelegate: { [delegateAddress: string]: EventHistory } = {}; // optional for additional analytics
-  public ethereum = new EthereumAdapter();
+  public ethereum?: EthereumAdapter;
+  private eventFetchers?: { [T in EventName]: EventFetcher };
 
-  constructor(delegateAddress: string, startingBlock: number, private storeExtraHistoryPerDelegate = false) {
-    this.history = new EventHistory(normalizeAddress(delegateAddress), startingBlock);
+  constructor(delegateAddress: string, private storeExtraHistoryPerDelegate = false) {
+    this.history = new EventHistory(normalizeAddress(delegateAddress));
   }
 
-  setEthereumContracts(web3: Web3, ethereumContractAddresses: EthereumContractAddresses) {
-    this.ethereum.setContracts(web3, ethereumContractAddresses);
+  setGenesisContract(
+    web3: Web3,
+    genesisContractAddress: string,
+    startingBlock: number,
+    autoscale?: Partial<AutoscaleOptions>,
+    requestsPerSecondLimit = 0
+  ) {
+    this.history.contractAddresses.contractRegistry = genesisContractAddress;
+    this.history.startingBlock = startingBlock;
+    this.history.lastProcessedBlock = startingBlock;
+    this.ethereum = new EthereumAdapter(web3, requestsPerSecondLimit);
+    this.eventFetchers = {
+      ContractAddressUpdated: new LookaheadEventFetcher('ContractAddressUpdated', this.ethereum, autoscale),
+      DelegatedStakeChanged: new LookaheadEventFetcher('DelegatedStakeChanged', this.ethereum, autoscale),
+      StakingRewardsAssigned: new LookaheadEventFetcher('StakingRewardsAssigned', this.ethereum, autoscale),
+      StakingRewardsDistributed: new LookaheadEventFetcher('StakingRewardsDistributed', this.ethereum, autoscale),
+    };
+    if (!this.storeExtraHistoryPerDelegate) {
+      this.eventFetchers.DelegatedStakeChanged.setFilter({ addr: this.history.delegateAddress });
+      this.eventFetchers.StakingRewardsDistributed.setFilter({ distributer: this.history.delegateAddress });
+    }
   }
 
   // returns the last processed block number in the new batch
-  // if maxBlocksInBatch is too big, exception will be thrown and up to caller to make it smaller
-  async processNextBatch(maxBlocksInBatch: number, latestEthereumBlock: number, concurrency?: number): Promise<number> {
-    if (!concurrency) {
-      concurrency = DEFAULT_CONCURRENCY;
+  async processNextBlock(latestEthereumBlock: number): Promise<number> {
+    if (!this.eventFetchers) {
+      throw new Error(`Ethereum contract is undefined, did you call setEthereumContract?`);
     }
 
-    // TODO: we now support multiple concurrent requests, also look into request batching https://web3js.readthedocs.io/en/v1.2.6/web3.html#batchrequest
-    const limit = pLimit(concurrency);
-    const fromBlock = this.history.lastProcessedBlock + 1;
-    const toBlock = Math.min(this.history.lastProcessedBlock + maxBlocksInBatch, latestEthereumBlock);
-    if (toBlock < fromBlock) {
+    const nextBlock = this.history.lastProcessedBlock + 1;
+    if (nextBlock > latestEthereumBlock) {
       throw new Error(`Not enough new blocks in network to process another batch.`);
     }
 
+    // Note about tracking changes in contract registry:
+    // If contract address was updated in contract registry in the middle of block 1000,
+    // we read blocks 1-1000 from old address and blocks 1001+ from the new address.
+    // This simplification is ok because contracts will be locked from emitting events during transition.
+
+    // update all contract addresses according to state to track changes in contract registry
+    for (const eventName of eventNames) {
+      const address = this.history.contractAddresses[contractByEventName(eventName)];
+      if (address) this.eventFetchers[eventName].setContractAddress(address);
+    }
+
+    // fetch from all event fetchers
     const requests = [];
-    const f0 = !this.storeExtraHistoryPerDelegate ? { addr: this.history.delegateAddress } : undefined;
-    const f1 = undefined; // no filter for this event
-    const f2 = !this.storeExtraHistoryPerDelegate ? { distributer: this.history.delegateAddress } : undefined;
-    requests[0] = limit(() => this.ethereum.readEvents('Delegations', 'DelegatedStakeChanged', fromBlock, toBlock, f0));
-    requests[1] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsAssigned', fromBlock, toBlock, f1));
-    requests[2] = limit(() => this.ethereum.readEvents('Rewards', 'StakingRewardsDistributed', fromBlock, toBlock, f2));
+    requests[0] = this.eventFetchers.ContractAddressUpdated.fetchBlock(nextBlock, latestEthereumBlock);
+    requests[1] = this.eventFetchers.DelegatedStakeChanged.fetchBlock(nextBlock, latestEthereumBlock);
+    requests[2] = this.eventFetchers.StakingRewardsAssigned.fetchBlock(nextBlock, latestEthereumBlock);
+    requests[3] = this.eventFetchers.StakingRewardsDistributed.fetchBlock(nextBlock, latestEthereumBlock);
 
     const results = await Promise.all(requests);
-    const d0 = HistoryDownloader._parseDelegationChangedEvents(results[0], this.history);
-    const d1 = HistoryDownloader._parseRewardsAssignedEvents(results[1], this.history);
-    const d2 = HistoryDownloader._parseRewardsDistributedEvents(results[2], this.history);
+    HistoryDownloader._parseContractAddressUpdated(results[0], this.history);
+    const d1 = HistoryDownloader._parseDelegationChangedEvents(results[1], this.history);
+    const d2 = HistoryDownloader._parseRewardsAssignedEvents(results[2], this.history);
+    const d3 = HistoryDownloader._parseRewardsDistributedEvents(results[3], this.history);
 
-    this.history.lastProcessedBlock = toBlock;
+    this.history.lastProcessedBlock = nextBlock;
 
     // parse extra histories for all delegates if required (default no)
     if (this.storeExtraHistoryPerDelegate) {
-      this._parseExtraHistoriesPerDelegate(_.union(d0, d1, d2), results, toBlock);
+      this._parseExtraHistoriesPerDelegate(_.union(d1, d2, d3), results, nextBlock);
     }
 
     return this.history.lastProcessedBlock;
   }
 
-  _parseExtraHistoriesPerDelegate(delegates: string[], results: EventData[][], toBlock: number) {
+  _parseExtraHistoriesPerDelegate(delegates: string[], results: EventData[][], nextBlock: number) {
     for (const delegateAddress of delegates) {
       if (!this.extraHistoryPerDelegate[delegateAddress]) {
-        this.extraHistoryPerDelegate[delegateAddress] = new EventHistory(delegateAddress, this.history.startingBlock);
+        const newHistory = new EventHistory(delegateAddress);
+        newHistory.startingBlock = this.history.startingBlock;
+        this.extraHistoryPerDelegate[delegateAddress] = newHistory;
       }
       const delegateHistory = this.extraHistoryPerDelegate[delegateAddress];
-      HistoryDownloader._parseDelegationChangedEvents(results[0], delegateHistory);
-      HistoryDownloader._parseRewardsAssignedEvents(results[1], delegateHistory);
-      HistoryDownloader._parseRewardsDistributedEvents(results[2], delegateHistory);
+      HistoryDownloader._parseDelegationChangedEvents(results[1], delegateHistory);
+      HistoryDownloader._parseRewardsAssignedEvents(results[2], delegateHistory);
+      HistoryDownloader._parseRewardsDistributedEvents(results[3], delegateHistory);
     }
     for (const [, delegateHistory] of Object.entries(this.extraHistoryPerDelegate)) {
-      delegateHistory.lastProcessedBlock = toBlock;
+      delegateHistory.lastProcessedBlock = nextBlock;
+    }
+  }
+
+  static _parseContractAddressUpdated(events: EventData[], history: EventHistory) {
+    for (const event of events) {
+      // for debug: console.log(event.blockNumber, event.returnValues);
+      switch (event.returnValues.contractName) {
+        case 'delegations':
+          history.contractAddresses.delegations = event.returnValues.addr;
+          break;
+        case 'rewards':
+          history.contractAddresses.rewards = event.returnValues.addr;
+          break;
+      }
     }
   }
 
@@ -140,53 +181,5 @@ export class HistoryDownloader {
       });
     }
     return Object.keys(allDelegates);
-  }
-
-  private autoscaleWindowSize = 0;
-  private autoscaleStreak = 0;
-  public autoscaleConsecutiveFailures = 0;
-
-  // experimental mode that chooses the maxBlocksInBatch for processNextBatch automatically
-  async processNextBatchAutoscale(
-    latestEthereumBlock: number,
-    {
-      concurrency = DEFAULT_CONCURRENCY,
-      startWindow = 10000,
-      maxWindow = 500000,
-      minWindow = 50,
-      windowGrowFactor = 2,
-      windowGrowAfter = 20,
-      windowShrinkFactor = 2,
-    }: {
-      concurrency?: number; // num of concurrent network requests
-      startWindow?: number; // the initial window size (max blocks in batch)
-      maxWindow?: number; // max possible window size (since it's autoscaling)
-      minWindow?: number; // min possible window size (since it's autoscaling)
-      windowGrowFactor?: number; // by how much should the window grow when attempting to grow
-      windowGrowAfter?: number; // after how many consecutive successes should we attempt to grow
-      windowShrinkFactor?: number; // by how much should the window shrink after a failure
-    } = {}
-  ): Promise<number> {
-    if (this.autoscaleWindowSize == 0) {
-      this.autoscaleWindowSize = startWindow;
-    }
-
-    try {
-      const res = await this.processNextBatch(this.autoscaleWindowSize, latestEthereumBlock, concurrency);
-      this.autoscaleStreak++;
-      this.autoscaleConsecutiveFailures = 0;
-      if (this.autoscaleStreak >= windowGrowAfter) {
-        this.autoscaleWindowSize = Math.round(this.autoscaleWindowSize * windowGrowFactor);
-        if (this.autoscaleWindowSize > maxWindow) this.autoscaleWindowSize = maxWindow;
-        this.autoscaleStreak = 0;
-      }
-      return res;
-    } catch (e) {
-      this.autoscaleConsecutiveFailures++;
-      this.autoscaleWindowSize = Math.round(this.autoscaleWindowSize / windowShrinkFactor);
-      if (this.autoscaleWindowSize < minWindow) this.autoscaleWindowSize = minWindow;
-      this.autoscaleStreak = 0;
-      throw e;
-    }
   }
 }

@@ -6,9 +6,11 @@ jest.setTimeout(60000);
 
 describe('new distribution', () => {
   const driver = new TestkitDriver();
+  let startingBlock = -1;
 
   beforeAll(async () => {
     log('deploying Orbs PoS V2 contracts');
+    startingBlock = await driver.getCurrentBlockPreDeploy();
     await driver.deployOrbsV2Contracts();
 
     log('preparing the scenario');
@@ -28,23 +30,40 @@ describe('new distribution', () => {
 
     // create a history downloader
     const delegateAddressWeirdCase = driver.delegateAddress!.toUpperCase();
-    const historyDownloader = new HistoryDownloader(delegateAddressWeirdCase, 0);
-    historyDownloader.setEthereumContracts(driver.web3, driver.ethereumContractAddresses!);
+    const historyDownloader = new HistoryDownloader(delegateAddressWeirdCase);
+    historyDownloader.setGenesisContract(
+      driver.web3,
+      driver.getContractRegistryAddress(),
+      startingBlock,
+      {
+        initialPageSize: 10,
+        maxPageSize: 1000,
+        minPageSize: 1,
+        pageGrowAfter: 3,
+      },
+      20
+    );
 
     // download history up to this block
     let maxProcessedBlock = 0;
     while (maxProcessedBlock < latestEthereumBlock) {
-      maxProcessedBlock = await historyDownloader.processNextBatch(100, latestEthereumBlock);
-      log(`processed up to block: ${maxProcessedBlock}`);
+      maxProcessedBlock = await historyDownloader.processNextBlock(latestEthereumBlock);
+      if (maxProcessedBlock % 100 == 0) log(`processed up to block: ${maxProcessedBlock}`);
     }
+    log(`processed up to block: ${maxProcessedBlock}`);
 
     // log history result
     console.log('history:', JSON.stringify(historyDownloader.history, null, 2));
 
     // expectations over history result
     expect(historyDownloader.history.delegateAddress).toEqual(driver.delegateAddress);
-    expect(historyDownloader.history.startingBlock).toEqual(0);
+    expect(historyDownloader.history.startingBlock).toEqual(startingBlock);
     expect(historyDownloader.history.lastProcessedBlock).toEqual(latestEthereumBlock);
+    expect(historyDownloader.history.contractAddresses).toEqual({
+      contractRegistry: driver.getContractRegistryAddress(),
+      delegations: driver.getContractAddress('delegations'),
+      rewards: driver.getContractAddress('rewards'),
+    });
     expect(historyDownloader.history.delegationChangeEvents.length).toBeGreaterThan(0);
     expect(historyDownloader.history.delegationChangeEvents[0].delegatorAddress).toEqual(driver.delegateAddress);
     expect(historyDownloader.history.assignmentEvents.length).toBeGreaterThan(0);
@@ -59,7 +78,7 @@ describe('new distribution', () => {
       { fractionForDelegators: 0.7 },
       historyDownloader.history
     );
-    distribution.setEthereumContracts(driver.web3, driver.ethereumContractAddresses!);
+    distribution.setRewardsContract(driver.web3, historyDownloader.history.contractAddresses.rewards);
 
     // log division result
     console.log('division:', JSON.stringify(distribution.division, null, 2));

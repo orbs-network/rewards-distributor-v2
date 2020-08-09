@@ -3,10 +3,9 @@ import * as Logger from './logger';
 import { EventHistory, Split, Division, DistributionEvent } from './model';
 import { Calculator } from './calculator';
 import BN from 'bn.js';
-import { EthereumContractAddresses } from '.';
 import Web3 from 'web3';
 import { bnAddZeroes } from './helpers';
-import { EthereumAdapter, TransactionBatch, TxProgressNotification } from './ethereum';
+import { EthereumAdapter, TransactionBatch, TxProgressNotification } from './ethereum/ethereum-adapter';
 
 const DEFAULT_NUM_RECIPIENTS_PER_TX = 10; // without the delegate
 const DEFAULT_NUM_CONFIRMATIONS = 4;
@@ -16,7 +15,7 @@ const DEFAULT_CONFIRMATION_TIMEOUT_SECONDS = 60 * 10;
 export class Distribution {
   public division: Division; // the division (how much every delegator is owed) that this Distribution distributes
   static granularity = bnAddZeroes(1, 15); // default distribution/assignment granularity used by the contracts
-  public ethereum = new EthereumAdapter();
+  public ethereum?: EthereumAdapter;
   private startScanningFromIndex = 0; // optimization, the index we can start scanning from to find history events
 
   // the ctor is private because instantiating a Distribution should only be done through the two static methods below
@@ -32,8 +31,12 @@ export class Distribution {
     this.division = Calculator.fixDivisionGranularity(accurateDivision, Distribution.granularity);
   }
 
-  setEthereumContracts(web3: Web3, ethereumContractAddresses: EthereumContractAddresses) {
-    this.ethereum.setContracts(web3, ethereumContractAddresses);
+  setRewardsContract(web3: Web3, rewardsContractAddress?: string, requestsPerSecondLimit = 0) {
+    if (!this.ethereum) this.ethereum = new EthereumAdapter(web3, requestsPerSecondLimit);
+    if (!rewardsContractAddress) {
+      throw new Error(`rewardsContractAddress is undefined.`);
+    }
+    this.ethereum.setRewardsContract(rewardsContractAddress);
   }
 
   // returns the last distribution if exists, null if no distribution done yet
@@ -258,6 +261,10 @@ export class Distribution {
     isComplete: boolean;
     txHashes: string[];
   }> {
+    if (!this.ethereum) {
+      throw new Error(`ethereum adapter is undefined, did you call setRewardsContract?`);
+    }
+
     if (!numConfirmations && numConfirmations !== 0) {
       numConfirmations = DEFAULT_NUM_CONFIRMATIONS;
     }

@@ -1,35 +1,30 @@
 # Example usage of the shared library
 
-The library is run from the point of view of a specific delegate who is distributing rewards. Their Ethereum address is `delegateAddress`.
+The library is run from the point of view of a specific guardian who is distributing rewards. Their Ethereum address is `guardianAddress`.
 
 ## Step 1: Create a history downloader
 
 ```js
 import { HistoryDownloader } from 'rewards-v2';
 
-const genesisBlockNumber = 0; // ethereum block number earlier than when Orbs PoS contracts deployed
-const delegateAddress = '0x16fcF728F8dc3F687132f2157D8379c021a08C12';
-
-// we're going to download history up to this point
-const latestEthereumBlock = await web3.eth.getBlockNumber();
-
-const historyDownloader = new HistoryDownloader(guardianAddress, genesisBlockNumber);
+const guardianAddress = '0x16fcF728F8dc3F687132f2157D8379c021a08C12';
+const historyDownloader = new HistoryDownloader(guardianAddress);
 
 // enter the correct contracts addresses here
-historyDownloader.setEthereumContracts(web3, {
-  Delegations: '0x6333c9549095651fCc8252345d6898208eBE8aaa',
-  Rewards: '0x87ed2d308D30EE8c170627aCdc54d6d75CaB6bDc'
-});
+const genesisContractAddress = '0x6333c9549095651fCc8252345d6898208eBE8aaa'; // just an example, use the official address
+const genesisBlockNumber = 0; // ethereum block number when Orbs PoS contracts were deployed
+historyDownloader.setGenesisContract(web3, genesisContractAddress, genesisBlockNumber);
 ```
 
 ## Step 2: Download the history
 
 ```js
-const numBlocksPerBatch = 1000;
+// we're going to download history up to this point
+const latestEthereumBlock = await web3.eth.getBlockNumber();
 
 let maxProcessedBlock = 0;
 while (maxProcessedBlock < latestEthereumBlock) {
-  maxProcessedBlock = await historyDownloader.processNextBatch(numBlocksPerBatch, latestEthereumBlock);
+  maxProcessedBlock = await historyDownloader.processNextBlock(latestEthereumBlock);
 }
 
 // present the historic data
@@ -52,16 +47,14 @@ if (distribution == null || distribution.isDistributionComplete()) {
 
 // present the intended division (who gets what)
 console.log(distribution.division);
-
-// enter the correct contracts addresses here
-distribution.setEthereumContracts(web3, {
-  Rewards: '0x87ed2d308D30EE8c170627aCdc54d6d75CaB6bDc'
-});
 ```
 
 ## Step 4: Send distribution transactions
 
 ```js
+// do this before every distribution since contracts may be updated
+distribution.setRewardsContract(web3, history.contractAddresses.rewards);
+
 const numRecipientsPerTx = 10;
 const numConfirmations = 4;
 const confirmationTimeoutSeconds = 600;
@@ -88,48 +81,17 @@ const { isComplete, txHashes } = await distribution.sendTransactionBatch(
 console.log(txHashes);
 ```
 
-## Step 1 Alternative: History downloader with data about all delegates
+## Step 1 Alternative: History downloader with data about all guardians
 
 This is useful for UI tools that show network-wide statistics and analytics. Normally, the history downloader only cares about the delegate doing the distribution. In this mode, it will download history for everybody.
 
 ```js
 // when creating, add 'true' at the last argument
-const historyDownloader = new HistoryDownloader(guardianAddress, genesisBlockNumber, true);
+const historyDownloader = new HistoryDownloader(guardianAddress, true);
 
 // after downloading the history (step 2), present the historic data
 const historyPerDelegate = historyDownloader.extraHistoryPerDelegate;
 for (const [delegateAddress, delegateHistory] of Object.entries(historyPerDelegate)) {
   console.log(delegateAddress, delegateHistory);
 }
-```
-
-## Step 2 Alternative: Download the history with autoscaling window size
-
-This experimental mode attempts to optimize history downloading by using a variable window size that autoscales and shrinks with errors (like too many events in window). Example also shows more robust error handling and retries.
-
-```js
-// all options have defaults and are optional
-const autoscaleOptions = {
-  startWindow: 10000,
-  maxWindow: 500000,
-  minWindow: 50,
-  windowGrowFactor: 2,
-  windowGrowAfter: 20,
-  windowShrinkFactor: 2,
-};
-
-let maxProcessedBlock = 0;
-while (maxProcessedBlock < latestEthereumBlock) {
-  try {
-    maxProcessedBlock = await historyDownloader.processNextBatchAutoscale(latestEthereumBlock, autoscaleOptions);
-  } catch (e) {
-    if (historyDownloader.autoscaleConsecutiveFailures >= 2) {
-      console.log('failing too often, trying again in 5 seconds');
-      await sleep(5000);
-    }
-  }
-}
-
-// present the historic data
-console.log(historyDownloader.history);
 ```
