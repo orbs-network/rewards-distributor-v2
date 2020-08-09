@@ -34,6 +34,7 @@ export class TestEnvironment {
       EthereumDiscountTxTimeoutSeconds: 4 * 60 * 60,
       EthereumNonDiscountTxTimeoutSeconds: 20 * 60,
       EthereumMaxGasPrice: 100000000000, // 100 gwei
+      EthereumRequestsPerSecondLimit: 20,
     };
   }
 

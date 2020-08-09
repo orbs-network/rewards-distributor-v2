@@ -23,12 +23,13 @@ export class HistoryDownloader {
     web3: Web3,
     genesisContractAddress: string,
     startingBlock: number,
-    autoscale?: Partial<AutoscaleOptions>
+    autoscale?: Partial<AutoscaleOptions>,
+    requestsPerSecondLimit = 0
   ) {
     this.history.contractAddresses.contractRegistry = genesisContractAddress;
     this.history.startingBlock = startingBlock;
     this.history.lastProcessedBlock = startingBlock;
-    this.ethereum = new EthereumAdapter(web3);
+    this.ethereum = new EthereumAdapter(web3, requestsPerSecondLimit);
     this.eventFetchers = {
       ContractAddressUpdated: new LookaheadEventFetcher('ContractAddressUpdated', this.ethereum, autoscale),
       DelegatedStakeChanged: new LookaheadEventFetcher('DelegatedStakeChanged', this.ethereum, autoscale),

@@ -16,6 +16,7 @@ export type DistributorConfiguration = EthereumTxParams & {
   DistributionFrequencySeconds: number;
   RewardFractionForDelegators: number;
   MaxRecipientsPerRewardsTx: number;
+  EthereumRequestsPerSecondLimit: number;
 };
 
 export class Distributor {
@@ -36,7 +37,13 @@ export class Distributor {
     this.signer = new Signer(config.SignerEndpoint);
     this.split = { fractionForDelegators: config.RewardFractionForDelegators };
     this.historyDownloader = new HistoryDownloader(config.GuardianAddress);
-    this.historyDownloader.setGenesisContract(this.web3, config.EthereumGenesisContract, config.EthereumFirstBlock);
+    this.historyDownloader.setGenesisContract(
+      this.web3,
+      config.EthereumGenesisContract,
+      config.EthereumFirstBlock,
+      {},
+      config.EthereumRequestsPerSecondLimit
+    );
     state.EventHistory = this.historyDownloader.history;
     state.HistoryMaxProcessedBlock = config.EthereumFirstBlock;
     Logger.log(`Distributor: initialized with first block ${state.HistoryMaxProcessedBlock}.`);
@@ -123,7 +130,11 @@ export class Distributor {
 
   async completeDistribution(distribution: Distribution) {
     this.state.InProgressDistribution = distributionStats(distribution, getCurrentClockTime(), false);
-    distribution.setRewardsContract(this.web3, this.historyDownloader.history.contractAddresses.rewards);
+    distribution.setRewardsContract(
+      this.web3,
+      this.historyDownloader.history.contractAddresses.rewards,
+      this.config.EthereumRequestsPerSecondLimit
+    );
     const batch = distribution.prepareTransactionBatch(this.config.MaxRecipientsPerRewardsTx);
     await sendTransactionBatch(batch, distribution, this.signer, this.state, this.config);
   }

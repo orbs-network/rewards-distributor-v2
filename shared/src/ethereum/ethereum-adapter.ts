@@ -5,6 +5,7 @@ import { Contract, PastEventOptions, EventData } from 'web3-eth-contract';
 import { compiledContracts } from '@orbs-network/orbs-ethereum-contracts-v2/release/compiled-contracts';
 import { sleep, DailyStats } from '../helpers';
 import { EventName, contractByEventName, getContractTypeName, EventFilter } from './types';
+import pThrottle from 'p-throttle';
 
 const CONFIRMATION_POLL_INTERVAL_SECONDS = 5;
 const GAS_LIMIT_PER_TX = 10000000; // TODO: improve
@@ -21,8 +22,13 @@ export type TransactionBatch = {
 export class EthereumAdapter {
   public rewardsContract?: Contract;
   public requestStats = new DailyStats();
+  private throttled?: pThrottle.ThrottledFunction<[], void>;
 
-  constructor(public web3: Web3) {}
+  constructor(public web3: Web3, requestsPerSecondLimit: number) {
+    if (requestsPerSecondLimit > 0) {
+      this.throttled = pThrottle(() => Promise.resolve(), requestsPerSecondLimit, 1000);
+    }
+  }
 
   setRewardsContract(address: string) {
     if (this.rewardsContract?.options.address == address) return;
@@ -49,6 +55,7 @@ export class EthereumAdapter {
       toBlock: toBlock,
     };
     if (filter) options.filter = filter;
+    if (this.throttled) await this.throttled();
     this.requestStats.add(1);
     return contract.getPastEvents(eventName, options);
   }
@@ -132,6 +139,7 @@ export class EthereumAdapter {
       await sleep(CONFIRMATION_POLL_INTERVAL_SECONDS * 1000);
       if (receipt == null) {
         try {
+          if (this.throttled) await this.throttled();
           receipt = await this.web3.eth.getTransactionReceipt(txHash);
         } catch (e) {
           // do nothing

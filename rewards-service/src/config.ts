@@ -16,6 +16,7 @@ export interface Configuration {
   EthereumDiscountTxTimeoutSeconds: number;
   EthereumNonDiscountTxTimeoutSeconds: number;
   EthereumMaxGasPrice: number;
+  EthereumRequestsPerSecondLimit: number;
 }
 
 export const defaultConfiguration = {
@@ -32,6 +33,7 @@ export const defaultConfiguration = {
   EthereumDiscountTxTimeoutSeconds: 4 * 60 * 60,
   EthereumNonDiscountTxTimeoutSeconds: 20 * 60,
   EthereumMaxGasPrice: 100000000000, // 100 gwei
+  EthereumRequestsPerSecondLimit: 0,
 };
 
 export function validateConfiguration(config: Configuration) {
@@ -127,5 +129,8 @@ export function validateConfiguration(config: Configuration) {
   }
   if (typeof config.EthereumMaxGasPrice != 'number') {
     throw new Error(`EthereumMaxGasPrice is not a number.`);
+  }
+  if (typeof config.EthereumRequestsPerSecondLimit != 'number') {
+    throw new Error(`EthereumRequestsPerSecondLimit is not a number.`);
   }
 }

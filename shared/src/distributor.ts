@@ -31,8 +31,8 @@ export class Distribution {
     this.division = Calculator.fixDivisionGranularity(accurateDivision, Distribution.granularity);
   }
 
-  setRewardsContract(web3: Web3, rewardsContractAddress?: string) {
-    if (!this.ethereum) this.ethereum = new EthereumAdapter(web3);
+  setRewardsContract(web3: Web3, rewardsContractAddress?: string, requestsPerSecondLimit = 0) {
+    if (!this.ethereum) this.ethereum = new EthereumAdapter(web3, requestsPerSecondLimit);
     if (!rewardsContractAddress) {
       throw new Error(`rewardsContractAddress is undefined.`);
     }

@@ -39,12 +39,18 @@ describe('resume distribution', () => {
     // create a history downloader
     const delegateAddressWeirdCase = driver.delegateAddress!.toUpperCase();
     const historyDownloader = new HistoryDownloader(delegateAddressWeirdCase);
-    historyDownloader.setGenesisContract(driver.web3, driver.getContractRegistryAddress(), 0, {
-      initialPageSize: 10,
-      maxPageSize: 1000,
-      minPageSize: 1,
-      pageGrowAfter: 3,
-    });
+    historyDownloader.setGenesisContract(
+      driver.web3,
+      driver.getContractRegistryAddress(),
+      0,
+      {
+        initialPageSize: 10,
+        maxPageSize: 1000,
+        minPageSize: 1,
+        pageGrowAfter: 3,
+      },
+      20
+    );
 
     // download history up to this block
     let maxProcessedBlock = 0;

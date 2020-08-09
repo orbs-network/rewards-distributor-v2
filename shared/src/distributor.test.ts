@@ -246,7 +246,7 @@ describe('sendTransactionBatch', () => {
     );
     if (d == null) fail();
     expect(d.getPreviousTransfers()).toEqual([]);
-    d.ethereum = new EthereumAdapter((null as unknown) as Web3);
+    d.ethereum = new EthereumAdapter((null as unknown) as Web3, 0);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
@@ -276,7 +276,7 @@ describe('sendTransactionBatch', () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
     expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0]]);
-    d.ethereum = new EthereumAdapter((null as unknown) as Web3);
+    d.ethereum = new EthereumAdapter((null as unknown) as Web3, 0);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
@@ -306,7 +306,7 @@ describe('sendTransactionBatch', () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithIncompleteNoDelegatorsDistribution());
     if (d == null) fail();
     expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0]]);
-    d.ethereum = new EthereumAdapter((null as unknown) as Web3);
+    d.ethereum = new EthereumAdapter((null as unknown) as Web3, 0);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
@@ -336,7 +336,7 @@ describe('sendTransactionBatch', () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithCompleteDistribution());
     if (d == null) fail();
     expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0], d.history.distributionEvents[1]]);
-    d.ethereum = new EthereumAdapter((null as unknown) as Web3);
+    d.ethereum = new EthereumAdapter((null as unknown) as Web3, 0);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve([]);
     });
@@ -350,7 +350,7 @@ describe('sendTransactionBatch', () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithCompleteNoDelegatorsDistribution());
     if (d == null) fail();
     expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0]]);
-    d.ethereum = new EthereumAdapter((null as unknown) as Web3);
+    d.ethereum = new EthereumAdapter((null as unknown) as Web3, 0);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve([]);
     });
@@ -364,7 +364,7 @@ describe('sendTransactionBatch', () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
     expect(d.getPreviousTransfers()).toEqual([d.history.distributionEvents[0]]);
-    d.ethereum = new EthereumAdapter((null as unknown) as Web3);
+    d.ethereum = new EthereumAdapter((null as unknown) as Web3, 0);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123', '0x456']);
     });
@@ -399,7 +399,7 @@ describe('sendTransactionBatch', () => {
   it('forwards errors', async () => {
     const d = Distribution.getLastDistribution(20, getHistoryWithIncompleteDistribution());
     if (d == null) fail();
-    d.ethereum = new EthereumAdapter((null as unknown) as Web3);
+    d.ethereum = new EthereumAdapter((null as unknown) as Web3, 0);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(() => {
       throw new Error('network connection error');
     });
@@ -415,7 +415,7 @@ describe('sendTransactionBatch', () => {
       getHistoryWithUnstartedDistribution()
     );
     if (d == null) fail();
-    d.ethereum = new EthereumAdapter((null as unknown) as Web3);
+    d.ethereum = new EthereumAdapter((null as unknown) as Web3, 0);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123']);
     });
@@ -448,7 +448,7 @@ describe('sendTransactionBatch', () => {
       getHistoryWithUnstartedDistribution()
     );
     if (d == null) fail();
-    d.ethereum = new EthereumAdapter((null as unknown) as Web3);
+    d.ethereum = new EthereumAdapter((null as unknown) as Web3, 0);
     jest.spyOn(d.ethereum, 'sendRewardsTransactionBatch').mockImplementation(async () => {
       return Promise.resolve(['0x123', '0x456', '0x789']);
     });
