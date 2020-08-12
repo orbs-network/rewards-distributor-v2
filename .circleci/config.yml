@@ -118,41 +118,9 @@ jobs:
             command: ./boyar/docker-build.sh
         - run: ./.circleci/rewards-service/release-to-staging.sh
 
-  build-and-release-rewards-service:
-    machine: true
-    steps:
-        - checkout
-        - node/install:
-            node-version: '12.18.0'
-        - docker/install-docker
-        - run: ./rewards-service/boyar/create-version-file.sh
-        - node/install-packages:
-            app-dir: ./shared
-        - run:
-            working_directory: ./shared
-            command: npm run build
-        - node/install-packages:
-            app-dir: ./rewards-service
-        - run:
-            working_directory: ./rewards-service
-            command: npm run build
-        - run:
-            working_directory: ./rewards-service
-            command: ./boyar/create-version-file.sh
-        - run:
-            working_directory: ./rewards-service
-            command: ./boyar/docker-build.sh
-        - run: ./.circleci/rewards-service/release.sh
-
 workflows:
   build-and-test:
     jobs:
       - test-shared
       - test-rewards-service
       - build-and-release-to-staging-rewards-service
-      - build-and-release-rewards-service:
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              only: master
