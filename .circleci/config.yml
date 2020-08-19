@@ -123,4 +123,9 @@ workflows:
     jobs:
       - test-shared
       - test-rewards-service
-      - build-and-release-to-staging-rewards-service
+      - build-and-release-to-staging-rewards-service:
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              only: /v.*/
