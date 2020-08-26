@@ -30,6 +30,7 @@ export class StatusWriter {
         InProgressDistribution: this.state.InProgressDistribution,
         LastTransactions: this.state.LastTransactions,
         EthereumRequestStats: this.state.EthereumRequestStats,
+        CurrentContractAddress: this.state.EventHistory?.contractAddresses ?? {},
         Config: this.config,
       },
     };

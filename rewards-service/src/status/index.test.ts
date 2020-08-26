@@ -47,6 +47,7 @@ describe('status task', () => {
       LastDistributions: {},
       LastTransactions: [],
       EthereumRequestStats: [],
+      CurrentContractAddress: {},
       Config: exampleConfig,
     });
   });

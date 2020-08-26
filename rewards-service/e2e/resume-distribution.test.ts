@@ -1,7 +1,14 @@
 import { TestEnvironment } from './driver';
 import { join } from 'path';
 import { sleep } from '../src/helpers';
-import { deepDataMatcher, isPositiveNumber, isValidTimeRef, isNumber, isValidTxHash } from './deep-matcher';
+import {
+  deepDataMatcher,
+  isPositiveNumber,
+  isValidTimeRef,
+  isNumber,
+  isValidTxHash,
+  isValidEthereumAddress,
+} from './deep-matcher';
 import { inflate15 } from 'rewards-v2/dist/e2e/driver';
 import { normalizeAddress } from 'rewards-v2';
 
@@ -54,6 +61,11 @@ describe('e2e with docker compose - resume distribution', () => {
           TotalNonGuardianAmount: '55231000000000000000',
           TotalGuardianAmount: '181480000000000000000',
         },
+      },
+      CurrentContractAddress: {
+        contractRegistry: driver.sharedTestkit.getContractRegistryAddress(),
+        rewards: isValidEthereumAddress,
+        delegations: isValidEthereumAddress,
       },
     });
     expect(errors1).toEqual([]);
