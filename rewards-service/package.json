@@ -20,7 +20,7 @@
     "pretest": "npm run typecheck && npm run lint",
     "clean": "rimraf ./dist/",
     "prebuild": "npm run clean",
-    "build": "tsc --skipLibCheck -p ./tsconfig.prod.json && cd .. && docker build -t local/rewards-service -f rewards-service/Dockerfile .",
+    "build": "tsc --skipLibCheck -p ./tsconfig.prod.json && cd .. && ./rewards-service/boyar/create-version-file.sh && docker build -t local/rewards-service -f rewards-service/Dockerfile .",
     "build:quick": "tsc --skipLibCheck -p ./tsconfig.prod.json",
     "test": "jest",
     "test:quick": "jest",
