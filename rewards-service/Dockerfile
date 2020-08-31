@@ -4,7 +4,7 @@ ENV NODE_ENV production
 
 WORKDIR /opt/orbs
 
-RUN mkdir -p /opt/shared/
+COPY .version ./version
 COPY shared/package*.json /opt/shared/
 COPY shared/dist /opt/shared/dist
 
