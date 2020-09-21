@@ -17,7 +17,7 @@ export class State {
 
 export type GasPriceStrategy = 'discount' | 'recommended';
 
-export type TransactionStatus = 'pending' | 'successful' | 'failed-send' | 'timeout' | 'removed-from-pool' | 'revert';
+export type TransactionStatus = 'pending' | 'successful' | 'failed-send' | 'timeout' | 'revert';
 
 export interface DistributionStats {
   DistributionName: string;

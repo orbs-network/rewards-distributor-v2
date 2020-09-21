@@ -211,7 +211,7 @@ describe('sendTransactionBatch', () => {
         SendTime: expect.any(Number),
         GasPriceStrategy: 'discount',
         GasPrice: 24000000000,
-        Status: 'removed-from-pool',
+        Status: 'timeout', // this used to return error
         TxHash: '0xtxHash',
         EthBlock: 0,
         DistributionName: '6666-7777',
