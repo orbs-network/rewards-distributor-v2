@@ -11,14 +11,16 @@ export function run(config: Configuration) {
   const distributor = new Distributor(state, config);
 
   const statusWriterTask = new TaskLoop(() => statusWriter.run(), config.StatusPollTimeSeconds * 1000);
-  const distributorTask = new TaskLoop(() => distributor.run(), config.DistributorWakeIntervalSeconds * 1000);
   statusWriterTask.start();
-  distributorTask.start();
+
+  // service is now deprecated (logic moved to contracts) -> disabling the entire distributor task
+  // const distributorTask = new TaskLoop(() => distributor.run(), config.DistributorWakeIntervalSeconds * 1000);
+  // distributorTask.start();
 
   process.on('SIGINT', function () {
     Logger.log('Received SIGINT, shutting down.');
     statusWriterTask.stop();
-    distributorTask.stop();
+    // distributorTask.stop();
     process.exit();
   });
 }

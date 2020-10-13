@@ -14,7 +14,7 @@ import { normalizeAddress } from 'rewards-v2';
 
 jest.setTimeout(5 * 60000);
 
-describe('e2e with docker compose - resume distribution', () => {
+describe.skip('e2e with docker compose - resume distribution', () => {
   const driver = new TestEnvironment(join(__dirname, 'docker-compose.yml'));
   driver.launchServices(10);
 
