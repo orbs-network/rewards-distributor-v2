@@ -23,7 +23,7 @@ export const defaultConfiguration = {
   StatusJsonPath: './status/status.json',
   StatusPollTimeSeconds: 20,
   DistributorWakeIntervalSeconds: 5 * 60,
-  EthereumGenesisContract: '0x10bFdCc77E998Eb849a18c79b880F8b9BE06Ad83',
+  EthereumGenesisContract: '0x5454223e3078Db87e55a15bE541cc925f3702eB0',
   EthereumFirstBlock: 10503000,
   DistributionFrequencySeconds: 14 * 24 * 60 * 60,
   EthereumPendingTxPollTimeSeconds: 3 * 60,
